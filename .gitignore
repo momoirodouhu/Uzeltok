@@ -1,0 +1,39 @@
+# Binaries
+/server
+/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build outputs
+*.out
+*.test
+
+# Dependency directories
+/vendor/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.iml
+*.swp
+*~
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# Coverage
+coverage.out
+
+# macOS
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Generated
+dist/
