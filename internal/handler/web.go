@@ -24,8 +24,7 @@ func NewHandler(s *store.LinkStore) *Handler {
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
 // 動的セグメントの解析はこのハンドラ内で行います（標準 ServeMux を使用）。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/share/", h.handleShare)
-	mux.HandleFunc("/drop/", h.handleDrop)
+	mux.HandleFunc("/", h.handleLink)
 }
 
 // fetchLink はストアからリンクを取得します。呼び出し元でエラーハンドリングを行います。
@@ -87,11 +86,14 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))
 }
 
-func (h *Handler) handleShare(w http.ResponseWriter, r *http.Request) {
-	// path: /share/<uuid> or /share/<uuid>/<filename>
-	p := strings.TrimPrefix(r.URL.Path, "/share/")
+// handleLink は `/share/` と `/drop/` の両方を処理する共通ハンドラです。
+// パスの先頭セグメントを気にせず UUID と省略可能なファイル名を処理します。
+func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
+	// path: /<uuid> or /<uuid>/<filename>
+	// root "/" will return a simple greeting
+	p := strings.TrimPrefix(r.URL.Path, "/")
 	if p == "" {
-		http.NotFound(w, r)
+		fmt.Fprint(w, "Hello, Uzeltok!")
 		return
 	}
 	parts := strings.SplitN(p, "/", 2)
@@ -116,10 +118,6 @@ func (h *Handler) handleShare(w http.ResponseWriter, r *http.Request) {
 	}
 	// filename が指定されている場合はファイルを返す
 	filename := parts[1]
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	l, err := h.fetchLink(uuid)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -132,38 +130,3 @@ func (h *Handler) handleShare(w http.ResponseWriter, r *http.Request) {
 	h.serveFile(w, r, l, filename)
 }
 
-func (h *Handler) handleDrop(w http.ResponseWriter, r *http.Request) {
-	// path: /drop/<uuid> or /drop/<uuid>/<filename>
-	p := strings.TrimPrefix(r.URL.Path, "/drop/")
-	if p == "" {
-		http.NotFound(w, r)
-		return
-	}
-	parts := strings.SplitN(p, "/", 2)
-	uuid := parts[0]
-	if uuid == "" {
-		http.NotFound(w, r)
-		return
-	}
-	if len(parts) == 1 || parts[1] == "" {
-		// Link 情報をテキストで返す
-		l, err := h.fetchLink(uuid)
-		if err != nil {
-			if err == store.ErrNotFound {
-				http.NotFound(w, r)
-				return
-			}
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		h.writeLinkInfo(w, l)
-		return
-	}
-	// filename が指定されている場合は未実装のままにする
-	filename := parts[1]
-	if r.Method == http.MethodPost {
-		http.Error(w, fmt.Sprintf("drop upload %s / %s: not implemented", uuid, filename), http.StatusNotImplemented)
-		return
-	}
-	http.Error(w, fmt.Sprintf("drop endpoint %s / %s: not implemented", uuid, filename), http.StatusNotImplemented)
-}
