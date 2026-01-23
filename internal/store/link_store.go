@@ -24,17 +24,14 @@ var (
     ErrInvalidPath = errors.New("invalid path")
 )
 
-// GetLink は baseDir/(share|drop)/<uuid>/_metadata.json を探して
+// GetLink は baseDir/<uuid>/_metadata.json を探して
 // 見つかればパースして返します。見つからなければ ErrNotFound を返します。
-func (s *LinkStore) GetLink(linkType model.LinkType, uuid string) (*model.Link, error) {
+func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
     if uuid == "" {
         return nil, ErrNotFound
     }
-    if linkType != model.TypeShare && linkType != model.TypeDrop {
-        return nil, ErrInvalidPath
-    }
 
-    metaPath := filepath.Join(s.baseDir, string(linkType), uuid, "_metadata.json")
+    metaPath := filepath.Join(s.baseDir, uuid, "_metadata.json")
     b, err := os.ReadFile(metaPath)
     if err != nil {
         if os.IsNotExist(err) {
@@ -49,12 +46,11 @@ func (s *LinkStore) GetLink(linkType model.LinkType, uuid string) (*model.Link, 
 
     l := &model.Link{
         ID:       uuid,
-        Type:     linkType,
         Metadata: md,
     }
 
     // ディレクトリを走査して Files を補完する（存在しない場合は空のまま返す）
-    dir := filepath.Join(s.baseDir, string(linkType), uuid)
+    dir := filepath.Join(s.baseDir, uuid)
     if entries, err := os.ReadDir(dir); err == nil {
         for _, e := range entries {
             if e.IsDir() {
@@ -95,7 +91,7 @@ func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, err
     }
 
     // 結合して正規化した絶対パスを作成
-    p := filepath.Join(baseAbs, string(l.Type), l.ID, filename)
+    p := filepath.Join(baseAbs, l.ID, filename)
     p = filepath.Clean(p)
 
     // baseAbs を基準に相対パスを取得し、".." で上方向に出ていないことを確認

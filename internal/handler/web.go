@@ -29,14 +29,14 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 // fetchLink はストアからリンクを取得します。呼び出し元でエラーハンドリングを行います。
-func (h *Handler) fetchLink(typ model.LinkType, uuid string) (*model.Link, error) {
-	return h.store.GetLink(typ, uuid)
+func (h *Handler) fetchLink(uuid string) (*model.Link, error) {
+	return h.store.GetLink(uuid)
 }
 
 // writeLinkInfo はリンクのメタ情報とファイル一覧をテキストで書き出します。
 func (h *Handler) writeLinkInfo(w http.ResponseWriter, l *model.Link) {
 	fmt.Fprintf(w, "ID: %s\n", l.ID)
-	fmt.Fprintf(w, "Type: %s\n", l.Type)
+	fmt.Fprintf(w, "Type: %s\n", l.Metadata.Type)
 	fmt.Fprintf(w, "CreatedAt: %s\n", l.Metadata.CreatedAt.Format(time.RFC3339))
 	if !l.Metadata.ExpiresAt.IsZero() {
 		fmt.Fprintf(w, "ExpiresAt: %s\n", l.Metadata.ExpiresAt.Format(time.RFC3339))
@@ -102,7 +102,7 @@ func (h *Handler) handleShare(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) == 1 || parts[1] == "" {
 		// Link 情報をテキストで返す
-		l, err := h.fetchLink(model.TypeShare, uuid)
+		l, err := h.fetchLink(uuid)
 		if err != nil {
 			if err == store.ErrNotFound {
 				http.NotFound(w, r)
@@ -120,7 +120,7 @@ func (h *Handler) handleShare(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	l, err := h.fetchLink(model.TypeShare, uuid)
+	l, err := h.fetchLink(uuid)
 	if err != nil {
 		if err == store.ErrNotFound {
 			http.NotFound(w, r)
@@ -147,7 +147,7 @@ func (h *Handler) handleDrop(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(parts) == 1 || parts[1] == "" {
 		// Link 情報をテキストで返す
-		l, err := h.fetchLink(model.TypeDrop, uuid)
+		l, err := h.fetchLink(uuid)
 		if err != nil {
 			if err == store.ErrNotFound {
 				http.NotFound(w, r)

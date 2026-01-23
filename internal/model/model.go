@@ -11,13 +11,13 @@ const (
 
 type Link struct {
 	ID       string
-	Type     LinkType
 	Metadata Metadata
 	Files    []FileInfo
 }
 
 type Metadata struct {
 	CreatedAt    time.Time `json:"created_at"`
+	Type         LinkType  `json:"type,omitempty"`
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	PasswordHash string    `json:"password_hash,omitempty"`
 }
