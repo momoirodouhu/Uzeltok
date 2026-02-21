@@ -1,0 +1,70 @@
+{{template "layout.gohtml" .}}
+
+{{define "title"}}Upload - Uzeltok{{end}}
+
+{{define "content"}}
+<div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
+        <span class="material-symbols-outlined text-[16px]">lock</span>
+        <span>Secure Transfer</span>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400 font-medium">Uzeltok File Share</span>
+    </div>
+</div>
+<div class="px-6 sm:px-10 pt-8 pb-4">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Secure Upload</h1>
+    <p class="text-slate-500 text-sm leading-relaxed max-w-md">
+        You are accessing a private drop-box. Files uploaded here are transferred and stored securely.
+    </p>
+</div>
+<form action="/upload" method="post" enctype="multipart/form-data">
+    <div class="px-6 sm:px-10 py-4">
+        <div class="relative group cursor-pointer">
+            <div
+                class="absolute -inset-0.5 bg-gradient-to-r from-primary to-[#1a6e80] rounded-xl opacity-0 group-hover:opacity-10 transition duration-500 blur">
+            </div>
+            <div
+                class="relative flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-10 transition-all group-hover:border-primary/50 group-hover:bg-white">
+                <div
+                    class="h-14 w-14 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <span class="material-symbols-outlined text-[28px]">cloud_upload</span>
+                </div>
+                <div class="flex flex-col items-center gap-1 text-center">
+                    <p class="text-slate-900 text-lg font-bold">Drag files here</p>
+                    <p class="text-slate-500 text-sm">or click to browse from your device</p>
+                </div>
+                <div
+                    class="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-100 bg-white px-3 py-1 text-xs font-medium text-slate-400">
+                    <span>Max file size: 5GB</span>
+                </div>
+                <input type="file" name="files" multiple
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            </div>
+        </div>
+    </div>
+    <div class="px-6 sm:px-10 pt-4 pb-2">
+        <label class="block text-sm font-semibold text-slate-900 mb-2" for="message">Note for the recipient
+            (optional)</label>
+        <textarea name="note"
+            class="block w-full rounded-xl border-slate-200 bg-slate-50/50 p-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary sm:text-sm resize-none transition-all shadow-sm"
+            id="message" placeholder="Type a short description or instructions to accompany the files..."
+            rows="3"></textarea>
+    </div>
+    <div class="p-6 sm:p-10 bg-white mt-2 pt-4">
+        <button type="submit"
+            class="relative w-full overflow-hidden rounded-lg bg-primary hover:bg-[#0c3d4a] text-white font-bold h-12 shadow-lg shadow-primary/20 transition-all duration-300 transform active:scale-[0.99] flex items-center justify-center gap-2 group">
+            <span>Upload Files</span>
+            <span
+                class="material-symbols-outlined text-[20px] transition-transform group-hover:-translate-y-1">arrow_upward</span>
+        </button>
+        <div class="mt-4 flex items-start gap-3 opacity-80">
+            <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5">info</span>
+            <p class="text-xs text-slate-500 leading-normal">
+                This link is unique to this session. Once the upload is complete or the window is closed, this link may
+                expire. Do not share this URL.
+            </p>
+        </div>
+    </div>
+</form>
+{{end}}

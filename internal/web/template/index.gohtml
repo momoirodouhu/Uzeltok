@@ -1,0 +1,47 @@
+{{template "layout.gohtml" .}}
+
+{{define "title"}}Uzeltok - Secure File Sharing{{end}}
+
+{{define "content"}}
+<div class="px-6 sm:px-10 py-12 flex flex-col items-center justify-center text-center">
+    <div
+        class="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary to-[#1a6e80] flex items-center justify-center text-white shadow-lg mb-6">
+        <span class="material-symbols-outlined text-[40px]">security</span>
+    </div>
+
+    <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 mb-4">Uzeltok File Share</h1>
+
+    <p class="text-slate-500 text-base leading-relaxed max-w-md mb-8">
+        A self-hosted drop-box for securely sharing files with anyone.
+        Your files are transferred securely over an encrypted connection.
+    </p>
+
+    <p>Contact admin to get upload/download link.</p>
+</div>
+
+<div class="bg-slate-50 border-t border-slate-100 p-6 sm:p-10">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
+        <div class="flex flex-col items-center gap-2">
+            <div class="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-1">
+                <span class="material-symbols-outlined text-[20px]">enhanced_encryption</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900">Secure Transfer</h3>
+            <p class="text-xs text-slate-500">Files are transferred securely over HTTPS.</p>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+            <div class="h-10 w-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-1">
+                <span class="material-symbols-outlined text-[20px]">timer</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900">Auto-Expiring</h3>
+            <p class="text-xs text-slate-500">Links and data automatically expire after viewing.</p>
+        </div>
+        <div class="flex flex-col items-center gap-2">
+            <div class="h-10 w-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-1">
+                <span class="material-symbols-outlined text-[20px]">speed</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900">No Sign-up</h3>
+            <p class="text-xs text-slate-500">Fast, anonymous sharing without registration.</p>
+        </div>
+    </div>
+</div>
+{{end}}

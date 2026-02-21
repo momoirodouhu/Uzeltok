@@ -1,0 +1,72 @@
+{{template "layout.gohtml" .}}
+
+{{define "title"}}Download {{.ID}} - Uzeltok{{end}}
+
+{{define "content"}}
+<div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
+        <span class="material-symbols-outlined text-[16px]">lock</span>
+        <span>Secure Transfer</span>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400 font-medium">Link ID:</span>
+        <span class="text-xs font-mono text-slate-600 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
+            {{.ID}}
+        </span>
+    </div>
+</div>
+<div class="px-6 sm:px-10 pt-8 pb-4">
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Secure Download</h1>
+    <p class="text-slate-500 text-sm leading-relaxed max-w-md">
+        The following files have been securely shared with you.
+        {{if not .Metadata.ExpiresAt.IsZero}}
+        <br>This link expires at
+        <span class="font-semibold text-slate-700">
+            {{.Metadata.ExpiresAt.Format "2006-01-02 15:04"}}
+        </span>.
+        {{end}}
+    </p>
+</div>
+<div class="px-6 sm:px-10 pb-2">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-900">Available Files ({{len .Files}})</h3>
+    </div>
+    <div class="flex flex-col gap-3">
+        {{if eq (len .Files) 0}}
+        <p
+            class="text-sm text-slate-500 italic px-4 py-8 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+            No files available.
+        </p>
+        {{else}}
+        {{range .Files}}
+        <div
+            class="group flex items-center gap-4 bg-white border border-slate-100 p-3 rounded-lg hover:border-slate-300 transition-colors shadow-sm">
+            <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                <span class="material-symbols-outlined text-[20px]">draft</span>
+            </div>
+            <div class="flex flex-col flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-900 truncate">{{.Name}}</p>
+                <p class="text-xs text-slate-500 font-mono">{{.Size}} bytes</p>
+            </div>
+            <a href="/{{$.ID}}/{{.Name}}" download
+                class="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                title="Download {{.Name}}">
+                <span class="material-symbols-outlined text-[20px]">download</span>
+            </a>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+</div>
+<div class="p-6 sm:p-10 bg-white mt-2 pt-4">
+    <div class="mt-4 flex items-start gap-3 opacity-80">
+        <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5">info</span>
+        <p class="text-xs text-slate-500 leading-normal">
+            These files were uploaded securely. Type: {{.Metadata.Type}}.
+            Created at:
+            {{.Metadata.CreatedAt.Format "2006-01-02 15:04"}}.
+        </p>
+    </div>
+</div>
+{{end}}

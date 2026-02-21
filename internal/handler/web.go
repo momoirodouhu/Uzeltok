@@ -11,14 +11,16 @@ import (
 
 	"uzeltok/internal/model"
 	"uzeltok/internal/store"
+	"uzeltok/internal/web"
 )
 
 type Handler struct {
 	store *store.LinkStore
+	view  *web.Provider
 }
 
-func NewHandler(s *store.LinkStore) *Handler {
-	return &Handler{store: s}
+func NewHandler(s *store.LinkStore, v *web.Provider) *Handler {
+	return &Handler{store: s, view: v}
 }
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
@@ -59,7 +61,7 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	rc, err := h.store.OpenFile(l, filename)
 	if err != nil {
 		if err == store.ErrNotFound {
-			http.NotFound(w, r)
+			h.notFound(w, r)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -86,20 +88,22 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))
 }
 
-// handleLink は `/share/` と `/drop/` の両方を処理する共通ハンドラです。
+// handleLink は `/<uuid>` と `/<uuid>/<filename>` の両方を処理する共通ハンドラです。
 // パスの先頭セグメントを気にせず UUID と省略可能なファイル名を処理します。
 func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 	// path: /<uuid> or /<uuid>/<filename>
-	// root "/" will return a simple greeting
 	p := strings.TrimPrefix(r.URL.Path, "/")
 	if p == "" {
-		fmt.Fprint(w, "Hello, Uzeltok!")
+		err := h.view.Render(w, "index.gohtml", nil)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 	parts := strings.SplitN(p, "/", 2)
 	uuid := parts[0]
 	if uuid == "" {
-		http.NotFound(w, r)
+		h.notFound(w, r)
 		return
 	}
 	if len(parts) == 1 || parts[1] == "" {
@@ -107,13 +111,22 @@ func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 		l, err := h.fetchLink(uuid)
 		if err != nil {
 			if err == store.ErrNotFound {
-				http.NotFound(w, r)
+				h.notFound(w, r)
 				return
 			}
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		h.writeLinkInfo(w, l)
+
+		tmpl := "share.gohtml"
+		if l.Metadata.Type == model.TypeDrop {
+			tmpl = "drop.gohtml"
+		}
+
+		err = h.view.Render(w, tmpl, l)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
 	// filename が指定されている場合はファイルを返す
@@ -121,7 +134,7 @@ func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 	l, err := h.fetchLink(uuid)
 	if err != nil {
 		if err == store.ErrNotFound {
-			http.NotFound(w, r)
+			h.notFound(w, r)
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -130,3 +143,11 @@ func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 	h.serveFile(w, r, l, filename)
 }
 
+// notFound は 404 Not Found ページを返します。
+func (h *Handler) notFound(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotFound)
+	err := h.view.Render(w, "404.gohtml", nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
