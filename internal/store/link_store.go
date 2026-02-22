@@ -138,3 +138,55 @@ func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, err
     }
     return f, nil
 }
+
+// CreateLink は baseDir/<linkID>/ ディレクトリと _metadata.json を新規作成します。
+func (s *LinkStore) CreateLink(l *model.Link) error {
+    if l == nil || l.ID == "" {
+        return ErrInvalidPath
+    }
+    dir := filepath.Join(s.baseDir, l.ID)
+    if err := os.MkdirAll(dir, 0o755); err != nil {
+        return err
+    }
+    b, err := json.MarshalIndent(l.Metadata, "", "  ")
+    if err != nil {
+        return err
+    }
+    return os.WriteFile(filepath.Join(dir, "_metadata.json"), b, 0o644)
+}
+
+// SaveFile はリンクディレクトリにファイルを書き込みます。
+// パスバリデーションは OpenFile と同等です。
+func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
+    if linkID == "" || filename == "" {
+        return ErrInvalidPath
+    }
+    if filepath.IsAbs(filename) {
+        return ErrInvalidPath
+    }
+
+    baseAbs, err := filepath.Abs(s.baseDir)
+    if err != nil {
+        return err
+    }
+
+    p := filepath.Join(baseAbs, linkID, filename)
+    p = filepath.Clean(p)
+
+    rel, err := filepath.Rel(baseAbs, p)
+    if err != nil {
+        return ErrInvalidPath
+    }
+    if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+        return ErrInvalidPath
+    }
+
+    f, err := os.Create(p)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+
+    _, err = io.Copy(f, r)
+    return err
+}

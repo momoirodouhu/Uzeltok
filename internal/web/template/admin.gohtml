@@ -30,7 +30,7 @@
     </div>
     <div class="flex flex-col gap-3">
         {{range .}}
-        <a href="/{{.ID}}" target="_blank"
+        <a href="/admin/{{.ID}}"
             class="group flex items-center gap-4 bg-white border border-slate-100 p-3 rounded-lg hover:border-slate-300 transition-colors shadow-sm">
             {{if eq .Metadata.Type "share"}}
             <div

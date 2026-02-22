@@ -1,0 +1,122 @@
+{{template "layout.gohtml" .}}
+
+{{define "title"}}Admin - {{.ID}} - Uzeltok{{end}}
+
+{{define "content"}}
+<div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
+        <span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+        <span>Admin</span>
+    </div>
+    <div class="flex items-center gap-2">
+        <a href="/admin"
+            class="inline-flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-[14px]">arrow_back</span>
+            Back to list
+        </a>
+    </div>
+</div>
+
+<div class="px-6 sm:px-10 pt-8 pb-4">
+    <div class="flex items-center gap-3 mb-2">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Link Details</h1>
+        {{if eq .Metadata.Type "share"}}
+        <span
+            class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-green-100 text-green-700">share</span>
+        {{else}}
+        <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700">drop</span>
+        {{end}}
+    </div>
+    <div class="flex flex-col gap-1 text-sm text-slate-500">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px]">fingerprint</span>
+            <span class="font-mono text-slate-700">{{.ID}}</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">schedule</span>
+                Created: {{.Metadata.CreatedAt.Format "2006-01-02 15:04"}}
+            </span>
+            {{if not .Metadata.ExpiresAt.IsZero}}
+            <span class="flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">timer</span>
+                Expires: {{.Metadata.ExpiresAt.Format "2006-01-02 15:04"}}
+            </span>
+            {{else}}
+            <span class="text-slate-400">No expiry</span>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<!-- File list with download -->
+<div class="px-6 sm:px-10 pb-2">
+    <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-900">Files ({{len .Files}})</h3>
+    </div>
+    <div class="flex flex-col gap-3">
+        {{if eq (len .Files) 0}}
+        <p
+            class="text-sm text-slate-500 italic px-4 py-8 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+            No files yet.
+        </p>
+        {{else}}
+        {{range .Files}}
+        <div
+            class="group flex items-center gap-4 bg-white border border-slate-100 p-3 rounded-lg hover:border-slate-300 transition-colors shadow-sm">
+            <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 border border-blue-100">
+                <span class="material-symbols-outlined text-[20px]">draft</span>
+            </div>
+            <div class="flex flex-col flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-900 truncate">{{.Name}}</p>
+                <p class="text-xs text-slate-500 font-mono">{{.Size}} bytes</p>
+            </div>
+            <a href="/admin/{{$.ID}}/{{.Name}}" download
+                class="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                title="Download {{.Name}}">
+                <span class="material-symbols-outlined text-[20px]">download</span>
+            </a>
+        </div>
+        {{end}}
+        {{end}}
+    </div>
+</div>
+
+<!-- Upload form -->
+<div class="px-6 sm:px-10 pt-4 pb-2">
+    <h3 class="text-sm font-semibold text-slate-900 mb-3">Upload Files</h3>
+    <form action="/admin/{{.ID}}/upload" method="post" enctype="multipart/form-data">
+        <div class="relative group cursor-pointer mb-4">
+            <div
+                class="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 transition-all group-hover:border-primary/50 group-hover:bg-white">
+                <div
+                    class="h-12 w-12 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-transform duration-300 shadow-sm">
+                    <span class="material-symbols-outlined text-[24px]">cloud_upload</span>
+                </div>
+                <div class="flex flex-col items-center gap-1 text-center">
+                    <p class="text-slate-900 text-sm font-bold">Drag files here</p>
+                    <p class="text-slate-500 text-xs">or click to browse</p>
+                </div>
+                <input type="file" name="files" multiple
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            </div>
+        </div>
+        <button type="submit"
+            class="w-full rounded-lg bg-primary hover:bg-[#0c3d4a] text-white font-bold h-10 shadow-lg shadow-primary/20 transition-all duration-300 flex items-center justify-center gap-2 text-sm">
+            <span>Upload</span>
+            <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
+        </button>
+    </form>
+</div>
+
+<div class="p-6 sm:p-10 bg-white mt-2 pt-4">
+    <div class="flex items-center gap-2">
+        <a href="/{{.ID}}" target="_blank"
+            class="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline">
+            <span class="material-symbols-outlined text-[14px]">open_in_new</span>
+            Open public link
+        </a>
+    </div>
+</div>
+{{end}}

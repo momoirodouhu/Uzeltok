@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"uzeltok/internal/handler"
 	"uzeltok/internal/store"
@@ -18,8 +19,16 @@ func main() {
 		log.Fatalf("failed to initialize view provider: %v", err)
 	}
 
-	h := handler.NewHandler(ls, vp)
+	adminPass := os.Getenv("ADMIN_PASSWORD")
+
+	h := handler.NewHandler(ls, vp, adminPass)
 	h.RegisterRoutes(http.DefaultServeMux)
+
+	if adminPass != "" {
+		fmt.Println("Admin access enabled (ADMIN_PASSWORD is set)")
+	} else {
+		fmt.Println("Admin access disabled (set ADMIN_PASSWORD to enable)")
+	}
 
 	fmt.Println("Server starting on http://localhost:8080...")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

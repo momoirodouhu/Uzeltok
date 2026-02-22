@@ -15,21 +15,145 @@ import (
 )
 
 type Handler struct {
-	store *store.LinkStore
-	view  *web.Provider
+	store     *store.LinkStore
+	view      *web.Provider
+	adminPass string
 }
 
-func NewHandler(s *store.LinkStore, v *web.Provider) *Handler {
-	return &Handler{store: s, view: v}
+func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string) *Handler {
+	return &Handler{store: s, view: v, adminPass: adminPass}
 }
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
 // 動的セグメントの解析はこのハンドラ内で行います（標準 ServeMux を使用）。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/admin", h.handleAdmin)
-	mux.HandleFunc("/admin/", h.handleAdmin)
+	auth := func(next http.HandlerFunc) http.HandlerFunc {
+		return adminAuth(next, h.adminPass)
+	}
+
+	// Admin routes (Basic Auth)
+	mux.HandleFunc("/admin", auth(h.handleAdmin))
+	mux.HandleFunc("/admin/", auth(h.handleAdminSub))
+
+	// Public routes
 	mux.HandleFunc("/", h.handleLink)
 }
+
+// --- Admin handlers ---
+
+// handleAdmin は全リンクの一覧を表示する管理画面を返します。
+func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	links, err := h.store.ListLinks()
+	if err != nil {
+		http.Error(w, "Failed to list links", http.StatusInternalServerError)
+		return
+	}
+
+	// 新しい順に並び替え
+	for i, j := 0, len(links)-1; i < j; i, j = i+1, j-1 {
+		links[i], links[j] = links[j], links[i]
+	}
+
+	err = h.view.Render(w, "admin.gohtml", links)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+// handleAdminSub は /admin/{id} と /admin/{id}/{filename} と /admin/{id}/upload を処理します。
+func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
+	// path: /admin/{id} or /admin/{id}/{filename} or /admin/{id}/upload
+	p := strings.TrimPrefix(r.URL.Path, "/admin/")
+	if p == "" {
+		h.handleAdmin(w, r)
+		return
+	}
+
+	parts := strings.SplitN(p, "/", 2)
+	uuid := parts[0]
+	if uuid == "" {
+		h.notFound(w, r)
+		return
+	}
+
+	l, err := h.fetchLink(uuid)
+	if err != nil {
+		if err == store.ErrNotFound {
+			h.notFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// /admin/{id}
+	if len(parts) == 1 || parts[1] == "" {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		err = h.view.Render(w, "admin_link.gohtml", l)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	sub := parts[1]
+
+	// /admin/{id}/upload
+	if sub == "upload" {
+		h.handleAdminUpload(w, r, l)
+		return
+	}
+
+	// /admin/{id}/{filename} — ファイルダウンロード
+	h.serveFile(w, r, l, sub)
+}
+
+// handleAdminUpload は管理者によるファイルアップロードを処理します。
+func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request, l *model.Link) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// 32MB max
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		http.Error(w, "failed to parse form: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	files := r.MultipartForm.File["files"]
+	if len(files) == 0 {
+		http.Error(w, "no files provided", http.StatusBadRequest)
+		return
+	}
+
+	for _, fh := range files {
+		f, err := fh.Open()
+		if err != nil {
+			http.Error(w, "failed to read file: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		err = h.store.SaveFile(l.ID, fh.Filename, f)
+		f.Close()
+		if err != nil {
+			http.Error(w, "failed to save file: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// アップロード後にリンク詳細ページへリダイレクト
+	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+}
+
+// --- Public handlers ---
 
 // fetchLink はストアからリンクを取得します。呼び出し元でエラーハンドリングを行います。
 func (h *Handler) fetchLink(uuid string) (*model.Link, error) {
@@ -143,30 +267,6 @@ func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.serveFile(w, r, l, filename)
-}
-
-// handleAdmin は全リンクの一覧を表示する管理画面を返します。
-func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	
-	links, err := h.store.ListLinks()
-	if err != nil {
-		http.Error(w, "Failed to list links", http.StatusInternalServerError)
-		return
-	}
-
-	// 新しい順に並び替え
-	for i, j := 0, len(links)-1; i < j; i, j = i+1, j-1 {
-		links[i], links[j] = links[j], links[i]
-	}
-
-	err = h.view.Render(w, "admin.gohtml", links)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
 }
 
 // notFound は 404 Not Found ページを返します。
