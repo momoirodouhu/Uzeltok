@@ -26,6 +26,8 @@ func NewHandler(s *store.LinkStore, v *web.Provider) *Handler {
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
 // 動的セグメントの解析はこのハンドラ内で行います（標準 ServeMux を使用）。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/admin", h.handleAdmin)
+	mux.HandleFunc("/admin/", h.handleAdmin)
 	mux.HandleFunc("/", h.handleLink)
 }
 
@@ -141,6 +143,30 @@ func (h *Handler) handleLink(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.serveFile(w, r, l, filename)
+}
+
+// handleAdmin は全リンクの一覧を表示する管理画面を返します。
+func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	
+	links, err := h.store.ListLinks()
+	if err != nil {
+		http.Error(w, "Failed to list links", http.StatusInternalServerError)
+		return
+	}
+
+	// 新しい順に並び替え
+	for i, j := 0, len(links)-1; i < j; i, j = i+1, j-1 {
+		links[i], links[j] = links[j], links[i]
+	}
+
+	err = h.view.Render(w, "admin.gohtml", links)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 // notFound は 404 Not Found ページを返します。

@@ -75,6 +75,33 @@ func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
     return l, nil
 }
 
+// ListLinks は baseDir 内の全てのリンクを取得してリストとして返します
+func (s *LinkStore) ListLinks() ([]*model.Link, error) {
+    entries, err := os.ReadDir(s.baseDir)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return []*model.Link{}, nil
+        }
+        return nil, err
+    }
+
+    var links []*model.Link
+    for _, e := range entries {
+        if !e.IsDir() {
+            continue
+        }
+        uuid := e.Name()
+        l, err := s.GetLink(uuid)
+        if err != nil {
+            // 個別のメタデータ読込に失敗した場合はスキップ
+            continue
+        }
+        links = append(links, l)
+    }
+
+    return links, nil
+}
+
 // ファイル実体の取得（ReadCloserを返すことで高速・低メモリ）
 func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, error) {
     if l == nil || filename == "" {
