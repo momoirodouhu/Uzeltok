@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
-	"strings"
 	"time"
 
 	"uzeltok/internal/model"
@@ -16,16 +15,24 @@ import (
 
 // adminAuth は Basic 認証ミドルウェアです（パスワードのみ検証、ユーザー名は任意）。
 // pass が空の場合は全てのリクエストを 403 Forbidden で拒否します。
-func adminAuth(next http.HandlerFunc, pass string) http.HandlerFunc {
+func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
+	pass := h.adminPass
 	return func(w http.ResponseWriter, r *http.Request) {
 		if pass == "" {
-			http.Error(w, "admin access is disabled", http.StatusForbidden)
+			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
+			w.WriteHeader(http.StatusUnauthorized)
+			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		_, p, ok := r.BasicAuth()
 		if !ok || subtle.ConstantTimeCompare([]byte(p), []byte(pass)) != 1 {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			w.WriteHeader(http.StatusUnauthorized)
+			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 		next(w, r)
@@ -57,28 +64,11 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleAdminSub は /admin/{id}, /admin/{id}/upload, /admin/{id}/delete,
-// /admin/{id}/{filename} を処理します。
-func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
-	p := strings.TrimPrefix(r.URL.Path, "/admin/")
-	if p == "" {
-		h.handleAdmin(w, r)
-		return
-	}
 
-	parts := strings.SplitN(p, "/", 2)
-	uuid := parts[0]
 
-	if uuid == "create_link" {
-		h.handleAdminCreateLink(w, r)
-		return
-	}
-
-	if uuid == "" {
-		h.notFound(w, r)
-		return
-	}
-
+// handleAdminDetail はリンク詳細画面を返します。
+func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
+	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -89,42 +79,21 @@ func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// /admin/{id} — リンク詳細
-	sub := ""
-	if len(parts) == 2 {
-		sub = parts[1]
-	}
-
-	switch sub {
-	case "":
-		h.handleAdminDetail(w, r, l)
-	case "upload":
-		h.handleAdminUpload(w, r, l)
-	case "delete":
-		h.handleAdminDelete(w, r, l)
-	case "delete_link":
-		h.handleAdminDeleteLink(w, r, l)
-	default:
-		// /admin/{id}/{filename} — ファイルダウンロード
-		h.serveFile(w, r, l, sub)
-	}
-}
-
-// handleAdminDetail はリンク詳細画面を返します。
-func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request, l *model.Link) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 	if err := h.view.Render(w, "admin_link.gohtml", l); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
 // handleAdminUpload は管理者によるファイルアップロードを処理します。
-func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request, l *model.Link) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
+	uuid := r.PathValue("id")
+	l, err := h.fetchLink(uuid)
+	if err != nil {
+		if err == store.ErrNotFound {
+			h.notFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -157,37 +126,62 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request, l *m
 	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
 }
 
-// handleAdminDelete は管理者によるファイル削除を処理します。
-func (h *Handler) handleAdminDelete(w http.ResponseWriter, r *http.Request, l *model.Link) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+// handleAdminDeleteFile は管理者によるファイル削除を処理します。
+func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) {
+	uuid := r.PathValue("id")
+	l, err := h.fetchLink(uuid)
+	if err != nil {
+		if err == store.ErrNotFound {
+			h.notFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	filename := r.FormValue("filename")
+	filename := r.PathValue("filename")
 	if filename == "" {
-		http.Error(w, "filename is required", http.StatusBadRequest)
+		h.notFound(w, r)
 		return
 	}
 
 	if err := h.store.DeleteFile(l.ID, filename); err != nil {
 		if err == store.ErrNotFound {
-			http.Error(w, "file not found", http.StatusNotFound)
+			h.notFound(w, r)
 			return
 		}
 		http.Error(w, "failed to delete file: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/links/"+l.ID, http.StatusSeeOther)
 }
+
+// handleAdminDownloadFile は管理者によるファイルダウンロードを処理します。
+func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request) {
+	uuid := r.PathValue("id")
+	l, err := h.fetchLink(uuid)
+	if err != nil {
+		if err == store.ErrNotFound {
+			h.notFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	filename := r.PathValue("filename")
+	if filename == "" {
+		h.notFound(w, r)
+		return
+	}
+
+	h.serveFile(w, r, l, filename)
+}
+
 
 // handleAdminCreateLink は新しいリンクを作成します。
 func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
 
 	linkType := r.FormValue("type")
 	expiresIn := r.FormValue("expires_in")
@@ -223,13 +217,19 @@ func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/links/"+l.ID, http.StatusSeeOther)
 }
 
 // handleAdminDeleteLink はリンクを物理的または論理的に削除します。
-func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request, l *model.Link) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request) {
+	uuid := r.PathValue("id")
+	l, err := h.fetchLink(uuid)
+	if err != nil {
+		if err == store.ErrNotFound {
+			h.notFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 

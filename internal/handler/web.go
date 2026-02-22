@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"uzeltok/internal/model"
@@ -27,15 +28,40 @@ func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string) *Handler 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	auth := func(next http.HandlerFunc) http.HandlerFunc {
-		return adminAuth(next, h.adminPass)
+		return h.adminAuth(next)
+	}
+
+	// Method override middleware for HTML forms
+	methodOverride := func(next http.Handler) http.HandlerFunc {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodPost {
+				if override := r.FormValue("_method"); override != "" {
+					r.Method = strings.ToUpper(override)
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+
+	// Wrapper to apply method override to specific routes
+	wrap := func(h http.HandlerFunc) http.HandlerFunc {
+		return methodOverride(h).ServeHTTP
 	}
 
 	// Admin routes (Basic Auth)
-	mux.HandleFunc("/admin", auth(h.handleAdmin))
-	mux.HandleFunc("/admin/", auth(h.handleAdminSub))
+	mux.HandleFunc("GET /admin", auth(h.handleAdmin))
+	mux.HandleFunc("POST /admin/links", auth(wrap(h.handleAdminCreateLink)))
+	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
+	mux.HandleFunc("POST /admin/links/{id}", auth(wrap(h.handleAdminDeleteLink)))
+	mux.HandleFunc("POST /admin/links/{id}/files", auth(wrap(h.handleAdminUpload)))
+	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(wrap(h.handleAdminDeleteFile)))
+	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
 
 	// Public routes
-	mux.HandleFunc("/", h.handleLink)
+	mux.HandleFunc("GET /{$}", h.handleIndex)
+	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
+	mux.HandleFunc("POST /{id}/files", wrap(h.handlePublicUpload))
+	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
 }
 
 // --- 共通ヘルパー ---

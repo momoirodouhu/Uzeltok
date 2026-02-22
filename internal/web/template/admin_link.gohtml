@@ -72,14 +72,14 @@
                 <p class="text-sm font-medium text-slate-900 truncate">{{.Name}}</p>
                 <p class="text-xs text-slate-500 font-mono">{{.Size}} bytes</p>
             </div>
-            <a href="/admin/{{$.ID}}/{{.Name}}" download
+            <a href="/admin/links/{{$.ID}}/files/{{.Name}}" download
                 class="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                 title="Download {{.Name}}">
                 <span class="material-symbols-outlined text-[20px]">download</span>
             </a>
-            <form action="/admin/{{$.ID}}/delete" method="post" class="inline"
+            <form action="/admin/links/{{$.ID}}/files/{{.Name}}" method="post" class="inline"
                 onsubmit="return confirm('Delete {{.Name}}?')">
-                <input type="hidden" name="filename" value="{{.Name}}" />
+                <input type="hidden" name="_method" value="DELETE">
                 <button type="submit"
                     class="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
                     title="Delete {{.Name}}">
@@ -95,7 +95,7 @@
 <!-- Upload form -->
 <div class="px-6 sm:px-10 pt-4 pb-2">
     <h3 class="text-sm font-semibold text-slate-900 mb-3">Upload Files</h3>
-    <form action="/admin/{{.ID}}/upload" method="post" enctype="multipart/form-data">
+    <form action="/admin/links/{{.ID}}/files" method="post" enctype="multipart/form-data">
         <div class="relative group cursor-pointer mb-4">
             <div
                 class="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 transition-all group-hover:border-primary/50 group-hover:bg-white">
@@ -128,8 +128,9 @@
                 Open public link
             </a>
         </div>
-        <form action="/admin/{{.ID}}/delete_link" method="post"
+        <form action="/admin/links/{{.ID}}" method="post"
             onsubmit="return confirm('Are you sure you want to delete this link? It will be moved to the trash folder on the server.')">
+            <input type="hidden" name="_method" value="DELETE">
             <button type="submit"
                 class="inline-flex items-center gap-1 text-xs font-medium text-red-500 hover:text-red-600 hover:underline transition-colors">
                 <span class="material-symbols-outlined text-[14px]">delete_forever</span>
