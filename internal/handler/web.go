@@ -112,6 +112,12 @@ func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// /admin/{id}/delete — ファイル削除 (POST with filename in form)
+	if sub == "delete" {
+		h.handleAdminDelete(w, r, l)
+		return
+	}
+
 	// /admin/{id}/{filename} — ファイルダウンロード
 	h.serveFile(w, r, l, sub)
 }
@@ -150,6 +156,31 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request, l *m
 	}
 
 	// アップロード後にリンク詳細ページへリダイレクト
+	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+}
+
+// handleAdminDelete は管理者によるファイル削除を処理します。
+func (h *Handler) handleAdminDelete(w http.ResponseWriter, r *http.Request, l *model.Link) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	filename := r.FormValue("filename")
+	if filename == "" {
+		http.Error(w, "filename is required", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.store.DeleteFile(l.ID, filename); err != nil {
+		if err == store.ErrNotFound {
+			http.Error(w, "file not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to delete file: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
 }
 

@@ -77,6 +77,15 @@
                 title="Download {{.Name}}">
                 <span class="material-symbols-outlined text-[20px]">download</span>
             </a>
+            <form action="/admin/{{$.ID}}/delete" method="post" class="inline"
+                onsubmit="return confirm('Delete {{.Name}}?')">
+                <input type="hidden" name="filename" value="{{.Name}}" />
+                <button type="submit"
+                    class="h-8 w-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                    title="Delete {{.Name}}">
+                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+            </form>
         </div>
         {{end}}
         {{end}}

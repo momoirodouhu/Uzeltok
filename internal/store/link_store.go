@@ -190,3 +190,39 @@ func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
     _, err = io.Copy(f, r)
     return err
 }
+
+// DeleteFile はリンクディレクトリからファイルを削除します。
+// パスバリデーションは OpenFile と同等です。
+func (s *LinkStore) DeleteFile(linkID, filename string) error {
+    if linkID == "" || filename == "" {
+        return ErrInvalidPath
+    }
+    if filepath.IsAbs(filename) {
+        return ErrInvalidPath
+    }
+
+    baseAbs, err := filepath.Abs(s.baseDir)
+    if err != nil {
+        return err
+    }
+
+    p := filepath.Join(baseAbs, linkID, filename)
+    p = filepath.Clean(p)
+
+    rel, err := filepath.Rel(baseAbs, p)
+    if err != nil {
+        return ErrInvalidPath
+    }
+    if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+        return ErrInvalidPath
+    }
+
+    err = os.Remove(p)
+    if err != nil {
+        if os.IsNotExist(err) {
+            return ErrNotFound
+        }
+        return err
+    }
+    return nil
+}
