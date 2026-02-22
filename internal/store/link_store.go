@@ -3,10 +3,12 @@ package store
 import (
     "encoding/json"
     "errors"
+    "fmt"
     "io"
     "os"
     "path/filepath"
     "strings"
+    "time"
 
     "uzeltok/internal/model"
 )
@@ -90,8 +92,12 @@ func (s *LinkStore) ListLinks() ([]*model.Link, error) {
         if !e.IsDir() {
             continue
         }
-        uuid := e.Name()
-        l, err := s.GetLink(uuid)
+        name := e.Name()
+        // _trash や隠しディレクトリをスキップ
+        if strings.HasPrefix(name, "_") || strings.HasPrefix(name, ".") {
+            continue
+        }
+        l, err := s.GetLink(name)
         if err != nil {
             // 個別のメタデータ読込に失敗した場合はスキップ
             continue
@@ -225,4 +231,31 @@ func (s *LinkStore) DeleteFile(linkID, filename string) error {
         return err
     }
     return nil
+}
+
+// DeleteLink はリンクディレクトリ全体を _trash ディレクトリに移動します（論理削除）。
+func (s *LinkStore) DeleteLink(uuid string) error {
+    if uuid == "" {
+        return ErrInvalidPath
+    }
+    srcDir := filepath.Join(s.baseDir, uuid)
+    
+    // リンクが存在するか確認
+    if _, err := os.Stat(srcDir); err != nil {
+        if os.IsNotExist(err) {
+            return ErrNotFound
+        }
+        return err
+    }
+
+    trashDir := filepath.Join(s.baseDir, "_trash")
+    if err := os.MkdirAll(trashDir, 0o755); err != nil {
+        return err
+    }
+
+    // タイムスタンプを付けて衝突防止
+    destName := fmt.Sprintf("%s_%d", uuid, time.Now().Unix())
+    destDir := filepath.Join(trashDir, destName)
+
+    return os.Rename(srcDir, destDir)
 }

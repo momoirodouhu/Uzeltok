@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"crypto/rand"
 	"crypto/subtle"
+	"encoding/hex"
 	"net/http"
 	"strings"
+	"time"
 
 	"uzeltok/internal/model"
 	"uzeltok/internal/store"
@@ -65,6 +68,12 @@ func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
 
 	parts := strings.SplitN(p, "/", 2)
 	uuid := parts[0]
+
+	if uuid == "create_link" {
+		h.handleAdminCreateLink(w, r)
+		return
+	}
+
 	if uuid == "" {
 		h.notFound(w, r)
 		return
@@ -93,6 +102,8 @@ func (h *Handler) handleAdminSub(w http.ResponseWriter, r *http.Request) {
 		h.handleAdminUpload(w, r, l)
 	case "delete":
 		h.handleAdminDelete(w, r, l)
+	case "delete_link":
+		h.handleAdminDeleteLink(w, r, l)
 	default:
 		// /admin/{id}/{filename} — ファイルダウンロード
 		h.serveFile(w, r, l, sub)
@@ -169,4 +180,67 @@ func (h *Handler) handleAdminDelete(w http.ResponseWriter, r *http.Request, l *m
 	}
 
 	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+}
+
+// handleAdminCreateLink は新しいリンクを作成します。
+func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	linkType := r.FormValue("type")
+	expiresIn := r.FormValue("expires_in")
+
+	b := make([]byte, 4) // 8 hex characters
+	if _, err := rand.Read(b); err != nil {
+		http.Error(w, "failed to generate random ID", http.StatusInternalServerError)
+		return
+	}
+
+	l := &model.Link{
+		ID: hex.EncodeToString(b),
+		Metadata: model.Metadata{
+			CreatedAt: time.Now(),
+		},
+	}
+
+	if linkType == "share" {
+		l.Metadata.Type = model.TypeShare
+	} else {
+		l.Metadata.Type = model.TypeDrop
+	}
+
+	if expiresIn != "" && expiresIn != "never" {
+		d, err := time.ParseDuration(expiresIn)
+		if err == nil {
+			l.Metadata.ExpiresAt = time.Now().Add(d)
+		}
+	}
+
+	if err := h.store.CreateLink(l); err != nil {
+		http.Error(w, "Failed to create link: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+}
+
+// handleAdminDeleteLink はリンクを物理的または論理的に削除します。
+func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request, l *model.Link) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if err := h.store.DeleteLink(l.ID); err != nil {
+		if err == store.ErrNotFound {
+			http.Error(w, "link not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, "failed to delete link: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/admin", http.StatusSeeOther)
 }
