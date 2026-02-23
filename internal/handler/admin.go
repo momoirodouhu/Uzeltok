@@ -1,14 +1,14 @@
 package handler
 
 import (
-	"crypto/rand"
 	"crypto/subtle"
-	"encoding/hex"
 	"net/http"
 	"time"
 
 	"uzeltok/internal/model"
 	"uzeltok/internal/store"
+
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 // --- Auth middleware ---
@@ -202,14 +202,14 @@ func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) 
 	linkType := r.FormValue("type")
 	expiresIn := r.FormValue("expires_in")
 
-	b := make([]byte, 4) // 8 hex characters
-	if _, err := rand.Read(b); err != nil {
+	id, err := gonanoid.Generate("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz", 14)
+	if err != nil {
 		http.Error(w, "failed to generate random ID", http.StatusInternalServerError)
 		return
 	}
 
 	l := &model.Link{
-		ID: hex.EncodeToString(b),
+		ID: id,
 		Metadata: model.Metadata{
 			CreatedAt: time.Now(),
 		},
