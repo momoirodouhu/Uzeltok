@@ -12,7 +12,7 @@
         <span
             class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
             <span class="material-symbols-outlined text-[14px]">link</span>
-            {{len .}} links
+            {{len .Links}} links
         </span>
     </div>
 </div>
@@ -59,7 +59,7 @@
         <h3 class="text-sm font-semibold text-slate-900">All Links</h3>
     </div>
     <div class="flex flex-col gap-3">
-        {{range .}}
+        {{range .Links}}
         <a href="/admin/links/{{.ID}}"
             class="group flex items-center gap-4 bg-white border border-slate-100 p-3 rounded-lg hover:border-slate-300 transition-colors shadow-sm">
             {{if eq .Metadata.Type "share"}}

@@ -59,7 +59,15 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		links[i], links[j] = links[j], links[i]
 	}
 
-	if err := h.view.Render(w, "admin.gohtml", links); err != nil {
+	data := struct {
+		Links []*model.Link
+		Host  string
+	}{
+		Links: links,
+		Host:  r.Host,
+	}
+
+	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -79,7 +87,15 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.view.Render(w, "admin_link.gohtml", l); err != nil {
+	data := struct {
+		*model.Link
+		Host string
+	}{
+		Link: l,
+		Host: r.Host,
+	}
+
+	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

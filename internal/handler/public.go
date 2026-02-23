@@ -32,7 +32,7 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderLinkPage(w, l)
+	h.renderLinkPage(w, r, l)
 }
 
 // handlePublicUpload は Drop リンクへのファイルアップロードを処理します。
@@ -106,12 +106,21 @@ func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderLinkPage はリンクの種類に応じたテンプレートを描画します。
-func (h *Handler) renderLinkPage(w http.ResponseWriter, l *model.Link) {
+func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *model.Link) {
 	tmpl := "share.gohtml"
 	if l.Metadata.Type == model.TypeDrop {
 		tmpl = "drop.gohtml"
 	}
-	if err := h.view.Render(w, tmpl, l); err != nil {
+	
+	data := struct {
+		*model.Link
+		Host string
+	}{
+		Link: l,
+		Host: r.Host,
+	}
+	
+	if err := h.view.Render(w, tmpl, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
