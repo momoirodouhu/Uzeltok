@@ -22,7 +22,8 @@
         {{if not .Metadata.ExpiresAt.IsZero}}
         <br>This link expires at
         <span class="font-semibold text-slate-700">
-            {{.Metadata.ExpiresAt.Format "2006-01-02 15:04"}}
+            <time datetime="{{.Metadata.ExpiresAt.Format " 2006-01-02T15:04:05Z07:00"}}"
+                class="local-time">{{.Metadata.ExpiresAt.Format "2006-01-02 15:04 MST"}}</time>
         </span>.
         {{end}}
     </p>
@@ -65,7 +66,8 @@
         <p class="text-xs text-slate-500 leading-normal">
             These files were uploaded securely. Type: {{.Metadata.Type}}.
             Created at:
-            {{.Metadata.CreatedAt.Format "2006-01-02 15:04"}}.
+            <time datetime="{{.Metadata.CreatedAt.Format " 2006-01-02T15:04:05Z07:00"}}"
+                class="local-time">{{.Metadata.CreatedAt.Format "2006-01-02 15:04 MST"}}</time>.
         </p>
     </div>
 </div>

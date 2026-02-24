@@ -39,12 +39,14 @@
         <div class="flex items-center gap-4">
             <span class="flex items-center gap-1">
                 <span class="material-symbols-outlined text-[14px]">schedule</span>
-                Created: {{.Metadata.CreatedAt.Format "2006-01-02 15:04"}}
+                Created: <time datetime="{{.Metadata.CreatedAt.Format " 2006-01-02T15:04:05Z07:00"}}"
+                    class="local-time">{{.Metadata.CreatedAt.Format "2006-01-02 15:04 MST"}}</time>
             </span>
             {{if not .Metadata.ExpiresAt.IsZero}}
             <span class="flex items-center gap-1 {{if .IsExpired}}text-red-500 font-medium{{end}}">
                 <span class="material-symbols-outlined text-[14px]">timer</span>
-                Expires: {{.Metadata.ExpiresAt.Format "2006-01-02 15:04"}}
+                Expires: <time datetime="{{.Metadata.ExpiresAt.Format " 2006-01-02T15:04:05Z07:00"}}"
+                    class="local-time">{{.Metadata.ExpiresAt.Format "2006-01-02 15:04 MST"}}</time>
                 {{if .IsExpired}} (Expired){{end}}
             </span>
             {{else}}
