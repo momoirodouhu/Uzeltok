@@ -90,9 +90,10 @@
                         {{.Metadata.CreatedAt.Format "2006-01-02 15:04"}}
                     </span>
                     {{if not .Metadata.ExpiresAt.IsZero}}
-                    <span class="flex items-center gap-1">
+                    <span class="flex items-center gap-1 {{if .IsExpired}}text-red-500 font-medium{{end}}">
                         <span class="material-symbols-outlined text-[12px]">timer</span>
                         {{.Metadata.ExpiresAt.Format "2006-01-02 15:04"}}
+                        {{if .IsExpired}} (Expired){{end}}
                     </span>
                     {{else}}
                     <span class="text-slate-300">No expiry</span>

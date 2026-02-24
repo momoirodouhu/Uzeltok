@@ -32,6 +32,11 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if l.IsExpired() {
+		h.notFound(w, r)
+		return
+	}
+
 	h.renderLinkPage(w, r, l)
 }
 
@@ -45,6 +50,11 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if l.IsExpired() {
+		h.notFound(w, r)
 		return
 	}
 
@@ -93,6 +103,11 @@ func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if l.IsExpired() {
+		h.notFound(w, r)
 		return
 	}
 

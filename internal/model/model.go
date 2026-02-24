@@ -15,6 +15,13 @@ type Link struct {
 	Files    []FileInfo
 }
 
+func (l *Link) IsExpired() bool {
+	if l.Metadata.ExpiresAt.IsZero() {
+		return false
+	}
+	return time.Now().After(l.Metadata.ExpiresAt)
+}
+
 type Metadata struct {
 	CreatedAt    time.Time `json:"created_at"`
 	Type         LinkType  `json:"type,omitempty"`
