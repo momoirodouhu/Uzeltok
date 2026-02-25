@@ -28,7 +28,7 @@ func NewProvider() (*Provider, error) {
 	}
 
 	// For each page, clone the layout and parse the specific page
-	pages := []string{"index.gohtml", "share.gohtml", "drop.gohtml", "404.gohtml", "admin.gohtml", "admin_link.gohtml"}
+	pages := []string{"index.gohtml", "share.gohtml", "drop.gohtml", "404.gohtml", "401.gohtml", "admin.gohtml", "admin_link.gohtml"}
 	for _, page := range pages {
 		clone, err := layout.Clone()
 		if err != nil {
