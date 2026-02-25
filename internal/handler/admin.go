@@ -89,10 +89,12 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		*model.Link
-		Host string
+		Host    string
+		Success string
 	}{
-		Link: l,
-		Host: r.Host,
+		Link:    l,
+		Host:    r.Host,
+		Success: r.URL.Query().Get("success"),
 	}
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {
@@ -139,7 +141,7 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/admin/"+l.ID, http.StatusSeeOther)
+	http.Redirect(w, r, "/admin/links/"+l.ID+"?success=upload", http.StatusSeeOther)
 }
 
 // handleAdminDeleteFile は管理者によるファイル削除を処理します。

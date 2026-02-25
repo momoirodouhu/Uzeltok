@@ -90,7 +90,7 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// GET /{id} にリダイレクトして完了を示す
-	http.Redirect(w, r, "/"+l.ID, http.StatusSeeOther)
+	http.Redirect(w, r, "/"+l.ID+"?success=upload", http.StatusSeeOther)
 }
 
 // handlePublicDownload は /{id}/files/{filename} を処理する公開ハンドラです。
@@ -129,10 +129,12 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 	
 	data := struct {
 		*model.Link
-		Host string
+		Host    string
+		Success string
 	}{
-		Link: l,
-		Host: r.Host,
+		Link:    l,
+		Host:    r.Host,
+		Success: r.URL.Query().Get("success"),
 	}
 	
 	if err := h.view.Render(w, tmpl, data); err != nil {
