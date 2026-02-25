@@ -5,8 +5,8 @@
 {{define "content"}}
 <div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
-        <span class="material-symbols-outlined text-[16px]">lock</span>
-        <span>Secure Transfer</span>
+        <span class="material-symbols-outlined text-[16px]">download</span>
+        <span>File Download</span>
     </div>
     <div class="flex items-center gap-2">
         <span class="text-xs text-slate-400 font-medium">Link ID:</span>
@@ -16,16 +16,9 @@
     </div>
 </div>
 <div class="px-6 sm:px-10 pt-8 pb-4">
-    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Secure Download</h1>
-    <p class="text-slate-500 text-sm leading-relaxed max-w-md">
-        The following files have been securely shared with you.
-        {{if not .Metadata.ExpiresAt.IsZero}}
-        <br>This link expires at
-        <span class="font-semibold text-slate-700">
-            <time datetime="{{.Metadata.ExpiresAt.Format " 2006-01-02T15:04:05Z07:00"}}"
-                class="local-time">{{.Metadata.ExpiresAt.Format "2006-01-02 15:04 MST"}}</time>
-        </span>.
-        {{end}}
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Download Files</h1>
+    <p class="text-slate-500 text-sm leading-relaxed">
+        The following files have been shared with you and are ready to download.
     </p>
 </div>
 <div class="px-6 sm:px-10 pb-2">
@@ -64,10 +57,13 @@
     <div class="mt-4 flex items-start gap-3 opacity-80">
         <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5">info</span>
         <p class="text-xs text-slate-500 leading-normal">
-            These files were uploaded securely. Type: {{.Metadata.Type}}.
-            Created at:
-            <time datetime="{{.Metadata.CreatedAt.Format " 2006-01-02T15:04:05Z07:00"}}"
-                class="local-time">{{.Metadata.CreatedAt.Format "2006-01-02 15:04 MST"}}</time>.
+            {{if not .Metadata.ExpiresAt.IsZero}}
+            This link automatically expires on:
+            <time datetime="{{.Metadata.ExpiresAt.Format " 2006-01-02T15:04:05Z07:00"}}"
+                class="local-time">{{.Metadata.ExpiresAt.Format "2006-01-02 15:04 MST"}}</time>
+            {{else}}
+            This link does not expire.
+            {{end}}
         </p>
     </div>
 </div>

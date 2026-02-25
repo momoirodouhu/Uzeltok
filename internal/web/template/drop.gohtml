@@ -5,8 +5,8 @@
 {{define "content"}}
 <div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
-        <span class="material-symbols-outlined text-[16px]">lock</span>
-        <span>Secure Transfer</span>
+        <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+        <span>File Upload</span>
     </div>
     <div class="flex items-center gap-2">
         <span class="text-xs text-slate-400 font-medium">Link ID:</span>
@@ -16,9 +16,9 @@
     </div>
 </div>
 <div class="px-6 sm:px-10 pt-8 pb-4">
-    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Secure Upload</h1>
+    <h1 class="text-3xl font-bold tracking-tight text-slate-900 mb-2">Quick Upload</h1>
     <p class="text-slate-500 text-sm leading-relaxed max-w-md">
-        You are accessing a private drop-box. Files uploaded here are transferred and stored securely.
+        You've been invited to upload files to this server. Drag and drop below.
     </p>
 </div>
 {{if eq .Success "upload"}}
@@ -69,8 +69,7 @@
         <div class="mt-4 flex items-start gap-3 opacity-80">
             <span class="material-symbols-outlined text-[16px] text-slate-400 mt-0.5">info</span>
             <p class="text-xs text-slate-500 leading-normal">
-                This link is unique to this session. Once the upload is complete or the window is closed, this link may
-                expire. Do not share this URL.
+                This is a private upload link. Do not share this URL with others.
             </p>
         </div>
     </div>
