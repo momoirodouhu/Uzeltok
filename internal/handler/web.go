@@ -78,7 +78,7 @@ func (h *Handler) fetchLink(uuid string) (*model.Link, error) {
 
 // serveFile は指定されたリンクとファイル名に対してファイルレスポンスを返します。
 func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Link, filename string) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
