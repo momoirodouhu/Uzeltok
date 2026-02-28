@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
+	"time"
 
 	"uzeltok/internal/model"
 	"uzeltok/internal/store"
@@ -11,7 +12,7 @@ import (
 
 // handleIndex は / を処理する公開ハンドラです。
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "public, max-age=2592000")
+	w.Header().Set("Cache-Control", "public, max-age=2592000") // 30 days
 	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	if err := h.view.Render(w, "index.gohtml", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -49,7 +50,17 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("ETag", etag)
 
-	w.Header().Set("Cache-Control", "public, no-cache")
+	maxAge := 604800 // 1 week
+	if !l.Metadata.ExpiresAt.IsZero() {
+		rem := int(time.Until(l.Metadata.ExpiresAt).Seconds())
+		if rem < maxAge {
+			maxAge = rem
+		}
+	}
+	if maxAge < 0 {
+		maxAge = 0
+	}
+	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
 	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	h.renderLinkPage(w, r, l)
@@ -57,6 +68,7 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 
 // handlePublicUpload は Drop リンクへのファイルアップロードを処理します。
 func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -146,10 +158,10 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 
 	data := struct {
 		*model.Link
-		Host    string
+		Host string
 	}{
-		Link:    l,
-		Host:    r.Host,
+		Link: l,
+		Host: r.Host,
 	}
 
 	if err := h.view.Render(w, tmpl, data); err != nil {

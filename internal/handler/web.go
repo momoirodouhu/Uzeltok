@@ -117,6 +117,15 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	if size == 0 {
 		size = int64(len(data))
 	}
+	if modtime.IsZero() {
+		// attempt to find actual modtime in the model.Link data
+		for _, f := range l.Files {
+			if f.Name == filename {
+				modtime = f.Timestamp
+				break
+			}
+		}
+	}
 	w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
@@ -125,6 +134,7 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 
 // notFound は 404 Not Found ページを返します。
 func (h *Handler) notFound(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusNotFound)
 	if err := h.view.Render(w, "404.gohtml", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

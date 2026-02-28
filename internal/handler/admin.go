@@ -19,6 +19,8 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 	pass := h.adminPass
 	return func(w http.ResponseWriter, r *http.Request) {
 		if pass == "" {
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Vary", "Accept-Encoding, Origin")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
 			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
@@ -28,6 +30,8 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		_, p, ok := r.BasicAuth()
 		if !ok || subtle.ConstantTimeCompare([]byte(p), []byte(pass)) != 1 {
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Vary", "Accept-Encoding, Origin")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
 			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
@@ -104,6 +108,7 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminUpload は管理者によるファイルアップロードを処理します。
 func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -146,6 +151,7 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminDeleteFile は管理者によるファイル削除を処理します。
 func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -201,6 +207,7 @@ func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request
 
 // handleAdminCreateLink は新しいリンクを作成します。
 func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 
 	linkType := r.FormValue("type")
 	expiresIn := r.FormValue("expires_in")
@@ -241,6 +248,7 @@ func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) 
 
 // handleAdminDeleteLink はリンクを物理的または論理的に削除します。
 func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
