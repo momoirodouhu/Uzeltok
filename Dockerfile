@@ -1,23 +1,12 @@
-# Build stage
-FROM golang:1.23-alpine AS builder
+FROM gcr.io/distroless/static-debian13:nonroot
+ARG TARGETPLATFORM
 
 WORKDIR /app
 
-COPY go.mod ./
-# COPY go.sum ./
-RUN go mod download
+COPY $TARGETPLATFORM/Uzeltok-server ./Uzeltok-server
 
-COPY . .
-
-RUN go build -o server ./cmd/server/main.go
-
-# Run stage
-FROM alpine:latest
-
-WORKDIR /app
-
-COPY --from=builder /app/server .
+USER nonroot
 
 EXPOSE 8080
 
-CMD ["./server"]
+ENTRYPOINT ["./Uzeltok-server"]

@@ -2,9 +2,6 @@ version: '3.8'
 
 services:
   server:
-    build: .
+    image: ghcr.io/momoirodouhu/Uzeltok:latest
     ports:
       - "8080:8080"
-    volumes:
-      - ./:/app
-    command: ["/app/server"]
