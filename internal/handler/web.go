@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -96,6 +97,9 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 				modtime = st.ModTime()
 			}
 		}
+		
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
 		http.ServeContent(w, r, filename, modtime, rs)
 		return
 	}
@@ -105,6 +109,9 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+
 	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))
 }
 
