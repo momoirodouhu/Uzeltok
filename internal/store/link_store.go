@@ -123,12 +123,13 @@ func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, err
         return nil, err
     }
 
-    // 結合して正規化した絶対パスを作成
-    p := filepath.Join(baseAbs, l.ID, filename)
+    // リンク専用のディレクトリを基準とする
+    expectedBase := filepath.Join(baseAbs, l.ID)
+    p := filepath.Join(expectedBase, filename)
     p = filepath.Clean(p)
 
-    // baseAbs を基準に相対パスを取得し、".." で上方向に出ていないことを確認
-    rel, err := filepath.Rel(baseAbs, p)
+    // expectedBase を基準に相対パスを取得し、".." で上方向に出ていないことを確認
+    rel, err := filepath.Rel(expectedBase, p)
     if err != nil {
         return nil, ErrInvalidPath
     }
@@ -176,10 +177,11 @@ func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
         return err
     }
 
-    p := filepath.Join(baseAbs, linkID, filename)
+    expectedBase := filepath.Join(baseAbs, linkID)
+    p := filepath.Join(expectedBase, filename)
     p = filepath.Clean(p)
 
-    rel, err := filepath.Rel(baseAbs, p)
+    rel, err := filepath.Rel(expectedBase, p)
     if err != nil {
         return ErrInvalidPath
     }
@@ -212,10 +214,11 @@ func (s *LinkStore) DeleteFile(linkID, filename string) error {
         return err
     }
 
-    p := filepath.Join(baseAbs, linkID, filename)
+    expectedBase := filepath.Join(baseAbs, linkID)
+    p := filepath.Join(expectedBase, filename)
     p = filepath.Clean(p)
 
-    rel, err := filepath.Rel(baseAbs, p)
+    rel, err := filepath.Rel(expectedBase, p)
     if err != nil {
         return ErrInvalidPath
     }
