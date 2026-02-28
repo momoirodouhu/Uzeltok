@@ -51,7 +51,8 @@
     <!-- Footer -->
     <div
         class="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-20 flex items-center gap-2 text-xs font-medium text-slate-500 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm transition-colors hover:border-slate-300">
-        <span>Uzeltok v1.0.0-alpha</span>
+        {{ $bi := buildInfo }}
+        <span>Uzeltok {{ $bi.Version }}</span>
         <div class="relative group/tooltip flex items-center">
             <span
                 class="material-symbols-outlined text-[16px] cursor-help text-slate-400 hover:text-slate-600 transition-colors">info</span>
@@ -61,7 +62,7 @@
                 class="absolute bottom-[calc(100%+12px)] right-0 w-64 p-3 bg-slate-800 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 origin-bottom-right group-hover/tooltip:scale-100 scale-95 z-30 pointer-events-none group-hover/tooltip:pointer-events-auto">
                 <p class="mb-3 leading-relaxed text-slate-200">Uzeltok is an open-source project. View the source code
                     or contribute on GitHub!</p>
-                <a href="https://github.com/momoirodouhu/Uzeltok" target="_blank" rel="noopener noreferrer"
+                <a href="{{ $bi.GithubURL }}" target="_blank" rel="noopener noreferrer"
                     class="flex items-center gap-2 justify-center bg-slate-700 hover:bg-slate-600 py-2 px-3 rounded-lg transition-colors overflow-hidden border border-slate-600">
                     <svg class="w-4 h-4 fill-current text-white shrink-0" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">

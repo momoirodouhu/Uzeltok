@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+
+	"uzeltok/internal/buildinfo"
 )
 
 //go:embed template/*.gohtml
@@ -22,7 +24,9 @@ func NewProvider() (*Provider, error) {
 	}
 
 	// Parse layout first
-	layout, err := template.ParseFS(templateFS, "template/layout.gohtml")
+	layout, err := template.New("layout.gohtml").Funcs(template.FuncMap{
+		"buildInfo": buildinfo.Get,
+	}).ParseFS(templateFS, "template/layout.gohtml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse layout: %w", err)
 	}
