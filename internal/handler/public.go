@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"net/http"
-	"time"
 
 	"uzeltok/internal/model"
 	"uzeltok/internal/store"
