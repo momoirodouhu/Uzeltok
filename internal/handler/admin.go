@@ -93,10 +93,10 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		*model.Link
-		Host    string
+		Host string
 	}{
-		Link:    l,
-		Host:    r.Host,
+		Link: l,
+		Host: r.Host,
 	}
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {
