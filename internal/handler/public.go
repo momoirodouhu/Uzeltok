@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"crypto/sha256"
 	"fmt"
+	"hash/crc32"
 	"net/http"
 
 	"uzeltok/internal/model"
@@ -157,7 +157,7 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 
 // generateETag はリンク情報とそのファイルリストからETagを生成します。
 func generateETag(l *model.Link) string {
-	h := sha256.New()
+	h := crc32.NewIEEE()
 	fmt.Fprintf(h, "link:%s\n", l.ID)
 	if !l.Metadata.ExpiresAt.IsZero() {
 		fmt.Fprintf(h, "expires:%d\n", l.Metadata.ExpiresAt.Unix())
@@ -165,5 +165,5 @@ func generateETag(l *model.Link) string {
 	for _, f := range l.Files {
 		fmt.Fprintf(h, "file:%s:%d:%d\n", f.Name, f.Size, f.Timestamp.UnixNano())
 	}
-	return fmt.Sprintf(`"%x"`, h.Sum(nil))
+	return fmt.Sprintf(`"%08x"`, h.Sum32())
 }
