@@ -12,6 +12,7 @@ func securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
+		w.Header().Set("Vary", "Accept-Encoding")
 		next.ServeHTTP(w, r)
 	})
 }

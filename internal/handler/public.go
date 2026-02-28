@@ -13,7 +13,6 @@ import (
 // handleIndex は / を処理する公開ハンドラです。
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=2592000") // 30 days
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	if err := h.view.Render(w, "index.gohtml", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -45,7 +44,6 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 	etag := generateETag(l)
 	w.Header().Set("ETag", etag)
 	w.Header().Set("Cache-Control", "public, no-cache")
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	if r.Header.Get("If-None-Match") == etag {
 		w.WriteHeader(http.StatusNotModified)
@@ -112,7 +110,6 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 // handlePublicDownload は /{id}/files/{filename} を処理する公開ハンドラです。
 func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, no-cache")
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)

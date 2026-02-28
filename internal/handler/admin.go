@@ -20,7 +20,6 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if pass == "" {
 			w.Header().Set("Cache-Control", "no-store")
-			w.Header().Set("Vary", "Accept-Encoding, Origin")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
 			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
@@ -31,7 +30,6 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 		_, p, ok := r.BasicAuth()
 		if !ok || subtle.ConstantTimeCompare([]byte(p), []byte(pass)) != 1 {
 			w.Header().Set("Cache-Control", "no-store")
-			w.Header().Set("Vary", "Accept-Encoding, Origin")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
 			if err := h.view.Render(w, "401.gohtml", nil); err != nil {
@@ -182,7 +180,6 @@ func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) 
 // handleAdminDownloadFile は管理者によるファイルダウンロードを処理します。
 func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
