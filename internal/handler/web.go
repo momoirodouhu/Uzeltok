@@ -69,6 +69,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
 }
 
+// Handler はセキュリティヘッダー付きの http.Handler を返します。
+func (h *Handler) Handler(mux *http.ServeMux) http.Handler {
+	h.RegisterRoutes(mux)
+	return securityHeaders(mux)
+}
+
 // --- 共通ヘルパー ---
 
 // fetchLink はストアからリンクを取得します。
@@ -82,6 +88,8 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
 
 	rc, err := h.store.OpenFile(l, filename)
 	if err != nil {

@@ -22,7 +22,8 @@ func main() {
 	adminPass := os.Getenv("ADMIN_PASSWORD")
 
 	h := handler.NewHandler(ls, vp, adminPass)
-	h.RegisterRoutes(http.DefaultServeMux)
+	mux := http.NewServeMux()
+	srv := h.Handler(mux)
 
 	if adminPass != "" {
 		fmt.Println("Admin access enabled (ADMIN_PASSWORD is set)")
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	fmt.Println("Server starting on http://localhost:8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", srv); err != nil {
 		fmt.Printf("Error starting server: %s\n", err)
 	}
 }
