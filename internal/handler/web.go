@@ -64,6 +64,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 		w.Header().Set("Cache-Control", "public, max-age=604800")
 		w.WriteHeader(http.StatusNoContent)
 	})
+	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=604800")
+		fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
+	})
 	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
 	mux.HandleFunc("POST /{id}/files", wrap(h.handlePublicUpload))
 	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
