@@ -67,6 +67,8 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		Host:  r.Host,
 	}
 
+	w.Header().Set("Cache-Control", "no-store")
+
 	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -88,12 +90,12 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		*model.Link
 		Host    string
-		Success string
 	}{
 		Link:    l,
 		Host:    r.Host,
-		Success: r.URL.Query().Get("success"),
 	}
+	
+	w.Header().Set("Cache-Control", "no-store")
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

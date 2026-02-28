@@ -57,15 +57,13 @@
 </div>
 
 <!-- File list with download -->
-{{if eq .Success "upload"}}
-<div class="px-6 sm:px-10 mb-4 mt-2">
+<div id="success-alert" class="px-6 sm:px-10 mb-4 mt-2 hidden">
     <div
         class="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow-sm">
         <span class="material-symbols-outlined text-[20px] text-green-500">check_circle</span>
         <p class="text-sm font-medium">Upload successful!</p>
     </div>
 </div>
-{{end}}
 <div class="px-6 sm:px-10 pb-2">
     <div class="flex items-center justify-between mb-3">
         <h3 class="text-sm font-semibold text-slate-900">Files ({{len .Files}})</h3>
@@ -221,8 +219,18 @@
         renderFileList();
     });
 
+    document.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('success') === 'upload') {
+            const alert = document.getElementById('success-alert');
+            if (alert) {
+                alert.classList.remove('hidden');
+            }
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+        }
+    });
 
-    // Reset on form submission if needed, but page will reload anyway
 </script>
 
 <div class="p-6 sm:p-10 bg-white mt-2 pt-4">

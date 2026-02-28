@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"net/http"
 
 	"uzeltok/internal/model"
@@ -9,6 +11,8 @@ import (
 
 // handleIndex は / を処理する公開ハンドラです。
 func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=2592000")
+	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	if err := h.view.Render(w, "index.gohtml", nil); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -36,6 +40,17 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 		h.notFound(w, r)
 		return
 	}
+
+	etag := generateETag(l)
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	w.Header().Set("ETag", etag)
+
+	w.Header().Set("Cache-Control", "public, no-cache")
+	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	h.renderLinkPage(w, r, l)
 }
@@ -132,14 +147,25 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 	data := struct {
 		*model.Link
 		Host    string
-		Success string
 	}{
 		Link:    l,
 		Host:    r.Host,
-		Success: r.URL.Query().Get("success"),
 	}
 
 	if err := h.view.Render(w, tmpl, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+// generateETag はリンク情報とそのファイルリストからETagを生成します。
+func generateETag(l *model.Link) string {
+	h := sha256.New()
+	fmt.Fprintf(h, "link:%s\n", l.ID)
+	if !l.Metadata.ExpiresAt.IsZero() {
+		fmt.Fprintf(h, "expires:%d\n", l.Metadata.ExpiresAt.Unix())
+	}
+	for _, f := range l.Files {
+		fmt.Fprintf(h, "file:%s:%d:%d\n", f.Name, f.Size, f.Timestamp.UnixNano())
+	}
+	return fmt.Sprintf(`"%x"`, h.Sum(nil))
 }
