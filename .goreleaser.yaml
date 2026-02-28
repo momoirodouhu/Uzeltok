@@ -34,7 +34,7 @@ archives:
 
 dockers_v2:
   - images:
-      - ghcr.io/momoirodouhu/Uzeltok
+      - ghcr.io/momoirodouhu/uzeltok
     tags:
       - "{{ .Version }}"
       - "{{ if .IsNightly }}nightly{{ end }}"
