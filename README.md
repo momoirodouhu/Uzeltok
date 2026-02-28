@@ -78,8 +78,8 @@ Uzeltok keeps it simple by relying exclusively on Environment Variables.
 | Variable | Default Value | Description |
 | :--- | :--- | :--- |
 | `ADMIN_PASSWORD` | *(empty)* | **Required.** The password used to access the `/admin` dashboard. If left empty, all admin dashboard access is completely blocked (HTTP 401). |
-| `UZELTOK_PORT` | `8080` | The port the HTTP server binds to. (not inplimented) |
-| `UZELTOK_DATA_DIR` | `./data` | The directory where files and metadata will be persistently stored. (not inplimented) |
+| `UZELTOK_PORT` | `8080` | The port the HTTP server binds to. (not implemented) |
+| `UZELTOK_DATA_DIR` | `./data` | The directory where files and metadata will be persistently stored. (not implemented) |
 
 ## 📖 Usage
 
