@@ -93,12 +93,25 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	var modtime time.Time
 	var size int64
 
+	fallbackModtime := time.Time{}
+	for _, f := range l.Files {
+		if f.Name == filename {
+			fallbackModtime = f.Timestamp
+			size = f.Size
+			break
+		}
+	}
+
 	if rs, ok := rc.(io.ReadSeeker); ok {
 		if f, ok := rc.(*os.File); ok {
 			if st, err := f.Stat(); err == nil {
 				modtime = st.ModTime()
 				size = st.Size()
 			}
+		}
+
+		if modtime.IsZero() {
+			modtime = fallbackModtime
 		}
 
 		w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
@@ -117,19 +130,12 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	if size == 0 {
 		size = int64(len(data))
 	}
-	if modtime.IsZero() {
-		// attempt to find actual modtime in the model.Link data
-		for _, f := range l.Files {
-			if f.Name == filename {
-				modtime = f.Timestamp
-				break
-			}
-		}
-	}
+	modtime = fallbackModtime
+
 	w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
-	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))
+	http.ServeContent(w, r, filename, modtime, bytes.NewReader(data))
 }
 
 // notFound は 404 Not Found ページを返します。

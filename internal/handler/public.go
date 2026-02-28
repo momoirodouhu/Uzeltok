@@ -42,14 +42,6 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	etag := generateETag(l)
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
-
-	w.Header().Set("ETag", etag)
-
 	maxAge := 604800 // 1 week
 	if !l.Metadata.ExpiresAt.IsZero() {
 		rem := int(time.Until(l.Metadata.ExpiresAt).Seconds())
@@ -60,8 +52,16 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 	if maxAge < 0 {
 		maxAge = 0
 	}
+
+	etag := generateETag(l)
+	w.Header().Set("ETag", etag)
 	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
 	w.Header().Set("Vary", "Accept-Encoding, Origin")
+
+	if r.Header.Get("If-None-Match") == etag {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
 
 	h.renderLinkPage(w, r, l)
 }
@@ -122,6 +122,9 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 
 // handlePublicDownload は /{id}/files/{filename} を処理する公開ハンドラです。
 func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, no-cache")
+	w.Header().Set("Vary", "Accept-Encoding, Origin")
+
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -144,8 +147,6 @@ func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, no-cache")
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	h.serveFile(w, r, l, filename)
 }
 

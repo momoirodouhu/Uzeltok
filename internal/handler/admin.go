@@ -47,6 +47,7 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 
 // handleAdmin は全リンクの一覧を表示する管理画面を返します。
 func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -71,8 +72,6 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		Host:  r.Host,
 	}
 
-	w.Header().Set("Cache-Control", "no-store")
-
 	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -80,6 +79,7 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminDetail はリンク詳細画面を返します。
 func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -98,8 +98,6 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 		Link:    l,
 		Host:    r.Host,
 	}
-	
-	w.Header().Set("Cache-Control", "no-store")
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -183,6 +181,9 @@ func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) 
 
 // handleAdminDownloadFile は管理者によるファイルダウンロードを処理します。
 func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Vary", "Accept-Encoding, Origin")
+
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -200,8 +201,6 @@ func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	h.serveFile(w, r, l, filename)
 }
 
