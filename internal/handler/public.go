@@ -42,20 +42,9 @@ func (h *Handler) handleLinkDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	maxAge := 604800 // 1 week
-	if !l.Metadata.ExpiresAt.IsZero() {
-		rem := int(time.Until(l.Metadata.ExpiresAt).Seconds())
-		if rem < maxAge {
-			maxAge = rem
-		}
-	}
-	if maxAge < 0 {
-		maxAge = 0
-	}
-
 	etag := generateETag(l)
 	w.Header().Set("ETag", etag)
-	w.Header().Set("Cache-Control", fmt.Sprintf("public, max-age=%d", maxAge))
+	w.Header().Set("Cache-Control", "public, no-cache")
 	w.Header().Set("Vary", "Accept-Encoding, Origin")
 
 	if r.Header.Get("If-None-Match") == etag {
