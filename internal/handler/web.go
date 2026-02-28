@@ -90,14 +90,18 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 	}
 	defer rc.Close()
 
+	var modtime time.Time
+	var size int64
+
 	if rs, ok := rc.(io.ReadSeeker); ok {
-		var modtime time.Time
 		if f, ok := rc.(*os.File); ok {
 			if st, err := f.Stat(); err == nil {
 				modtime = st.ModTime()
+				size = st.Size()
 			}
 		}
-		
+
+		w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
 		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
 		http.ServeContent(w, r, filename, modtime, rs)
@@ -109,7 +113,11 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	
+
+	if size == 0 {
+		size = int64(len(data))
+	}
+	w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
 	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
 	http.ServeContent(w, r, filename, time.Time{}, bytes.NewReader(data))

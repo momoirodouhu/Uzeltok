@@ -117,6 +117,8 @@ func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Cache-Control", "public, no-cache")
+	w.Header().Set("Vary", "Accept-Encoding, Origin")
 	h.serveFile(w, r, l, filename)
 }
 
