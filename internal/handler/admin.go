@@ -104,7 +104,6 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminUpload は管理者によるファイルアップロードを処理します。
 func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -147,7 +146,6 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
 
 // handleAdminDeleteFile は管理者によるファイル削除を処理します。
 func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
@@ -203,8 +201,6 @@ func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request
 
 // handleAdminCreateLink は新しいリンクを作成します。
 func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-
 	linkType := r.FormValue("type")
 	expiresIn := r.FormValue("expires_in")
 
@@ -244,7 +240,6 @@ func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) 
 
 // handleAdminDeleteLink はリンクを物理的または論理的に削除します。
 func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
 	uuid := r.PathValue("id")
 	l, err := h.fetchLink(uuid)
 	if err != nil {
