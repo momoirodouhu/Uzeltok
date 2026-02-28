@@ -19,6 +19,6 @@ func Get() Info {
 		Version:   Version,
 		GithubURL: GithubURL,
 	}
-	
+
 	return info
 }

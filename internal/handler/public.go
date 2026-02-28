@@ -126,7 +126,7 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 	if l.Metadata.Type == model.TypeDrop {
 		tmpl = "drop.gohtml"
 	}
-	
+
 	data := struct {
 		*model.Link
 		Host    string
@@ -136,7 +136,7 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 		Host:    r.Host,
 		Success: r.URL.Query().Get("success"),
 	}
-	
+
 	if err := h.view.Render(w, tmpl, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

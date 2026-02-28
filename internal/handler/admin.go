@@ -72,8 +72,6 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-
 // handleAdminDetail はリンク詳細画面を返します。
 func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 	uuid := r.PathValue("id")
@@ -196,7 +194,6 @@ func (h *Handler) handleAdminDownloadFile(w http.ResponseWriter, r *http.Request
 
 	h.serveFile(w, r, l, filename)
 }
-
 
 // handleAdminCreateLink は新しいリンクを作成します。
 func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) {
