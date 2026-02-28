@@ -132,7 +132,7 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 		}
 
 		w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(filename)))
 
 		http.ServeContent(w, r, filename, modtime, rs)
 		return
