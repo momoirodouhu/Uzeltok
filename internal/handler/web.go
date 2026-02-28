@@ -60,6 +60,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Public routes
 	mux.HandleFunc("GET /{$}", h.handleIndex)
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=604800")
+		w.WriteHeader(http.StatusNoContent)
+	})
 	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
 	mux.HandleFunc("POST /{id}/files", wrap(h.handlePublicUpload))
 	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
