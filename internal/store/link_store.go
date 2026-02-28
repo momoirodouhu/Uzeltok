@@ -136,6 +136,9 @@ func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, err
     if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
         return nil, ErrInvalidPath
     }
+    if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
+        return nil, ErrInvalidPath
+    }
     f, err := os.Open(p)
     if err != nil {
         if os.IsNotExist(err) {
@@ -188,6 +191,9 @@ func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
     if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
         return ErrInvalidPath
     }
+    if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
+        return ErrInvalidPath
+    }
 
     f, err := os.Create(p)
     if err != nil {
@@ -223,6 +229,9 @@ func (s *LinkStore) DeleteFile(linkID, filename string) error {
         return ErrInvalidPath
     }
     if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+        return ErrInvalidPath
+    }
+    if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
         return ErrInvalidPath
     }
 
