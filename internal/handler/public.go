@@ -132,6 +132,11 @@ func (h *Handler) handlePublicDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if l.Metadata.Type != model.TypeShare {
+		h.notFound(w, r)
+		return
+	}
+
 	h.serveFile(w, r, l, filename)
 }
 
