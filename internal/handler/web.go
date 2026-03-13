@@ -61,7 +61,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /admin/links", auth(h.csrfProtect(wrap(h.handleAdminCreateLink))))
 	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
 	mux.HandleFunc("POST /admin/links/{id}", auth(h.csrfProtect(wrap(h.handleAdminDeleteLink))))
-	mux.HandleFunc("POST /admin/links/{id}/files", auth(h.csrfProtect(wrap(h.handleAdminUpload))))
+	mux.HandleFunc("POST /admin/links/{id}/files", auth(h.csrfProtect(h.handleAdminUpload)))
 	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(h.csrfProtect(wrap(h.handleAdminDeleteFile))))
 	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
 
@@ -77,7 +77,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 		fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
 	})
 	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
-	mux.HandleFunc("POST /{id}/files", wrap(h.handlePublicUpload))
+	mux.HandleFunc("POST /{id}/files", h.handlePublicUpload)
 	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
 }
 

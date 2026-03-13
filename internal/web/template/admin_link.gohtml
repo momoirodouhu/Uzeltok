@@ -110,7 +110,7 @@
 <!-- Upload form -->
 <div class="px-6 sm:px-10 pt-4 pb-2">
     <h3 class="text-sm font-semibold text-slate-900 mb-3">Upload Files</h3>
-    <form action="/admin/links/{{.ID}}/files" method="post" enctype="multipart/form-data">
+    <form action="/admin/links/{{.ID}}/files?csrf_token={{.CSRFToken}}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <div id="drop-zone" class="relative group cursor-pointer mb-4">
             <div id="drop-inner"

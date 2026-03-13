@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/hex"
+	"mime"
 	"net/http"
 	"strings"
 )
@@ -68,7 +69,14 @@ func (h *Handler) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 			http.Error(w, "CSRF validation failed", http.StatusForbidden)
 			return
 		}
-		formToken := r.FormValue(csrfFormField)
+
+		formToken := r.Header.Get("X-CSRF-Token")
+		if formToken == "" {
+			formToken = r.URL.Query().Get(csrfFormField)
+		}
+		if formToken == "" && !isMultipartRequest(r) {
+			formToken = r.FormValue(csrfFormField)
+		}
 		if !h.isValidCSRFToken(formToken) {
 			http.Error(w, "CSRF validation failed", http.StatusForbidden)
 			return
@@ -79,6 +87,14 @@ func (h *Handler) csrfProtect(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+func isMultipartRequest(r *http.Request) bool {
+	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
+	if err != nil {
+		return false
+	}
+	return strings.EqualFold(mediaType, "multipart/form-data")
 }
 
 // securityHeaders は全レスポンスに共通のセキュリティヘッダーを設定するミドルウェアです。

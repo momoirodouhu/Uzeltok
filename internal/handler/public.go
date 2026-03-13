@@ -77,6 +77,11 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.ContentLength > h.maxUploadBytes {
+		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes)
 	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
 		var mbe *http.MaxBytesError
