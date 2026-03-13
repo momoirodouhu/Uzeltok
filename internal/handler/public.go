@@ -158,12 +158,19 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 		tmpl = "drop.gohtml"
 	}
 
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+
 	data := struct {
 		*model.Link
-		Host string
+		Host    string
+		BaseURL string
 	}{
-		Link: l,
-		Host: r.Host,
+		Link:    l,
+		Host:    r.Host,
+		BaseURL: fmt.Sprintf("%s://%s", scheme, r.Host),
 	}
 
 	if err := h.view.Render(w, tmpl, data); err != nil {

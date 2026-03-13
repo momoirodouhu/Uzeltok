@@ -2,6 +2,17 @@
 
 {{define "title"}}Upload - Uzeltok{{end}}
 
+{{define "ogp"}}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Uzeltok" />
+<meta property="og:url" content="{{.BaseURL}}/{{.ID}}" />
+<meta property="og:title" content="Upload files – Uzeltok" />
+<meta property="og:description" content="You've been invited to upload files to this server." />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content="Upload files – Uzeltok" />
+<meta name="twitter:description" content="You've been invited to upload files to this server." />
+{{end}}
+
 {{define "content"}}
 <div class="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider">
