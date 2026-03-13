@@ -70,7 +70,7 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}{
 		Links:     links,
 		Host:      r.Host,
-		CSRFToken: ensureCSRFCookie(w, r),
+		CSRFToken: h.ensureCSRFCookie(w, r),
 	}
 
 	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
@@ -99,7 +99,7 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 	}{
 		Link:      l,
 		Host:      r.Host,
-		CSRFToken: ensureCSRFCookie(w, r),
+		CSRFToken: h.ensureCSRFCookie(w, r),
 	}
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {

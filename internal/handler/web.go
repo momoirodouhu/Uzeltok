@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"crypto/rand"
 	"bytes"
 	"fmt"
 	"io"
@@ -20,11 +21,16 @@ type Handler struct {
 	view           *web.Provider
 	adminPass      string
 	maxUploadBytes int64
+	csrfSecret     [32]byte
 }
 
 // NewHandler は新しい Handler を生成します。
 func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) *Handler {
-	return &Handler{store: s, view: v, adminPass: adminPass, maxUploadBytes: maxUploadBytes}
+	h := &Handler{store: s, view: v, adminPass: adminPass, maxUploadBytes: maxUploadBytes}
+	if _, err := rand.Read(h.csrfSecret[:]); err != nil {
+		panic("failed to initialize CSRF secret")
+	}
+	return h
 }
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
@@ -52,11 +58,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Admin routes (Basic Auth + CSRF protection for mutations)
 	mux.HandleFunc("GET /admin", auth(h.handleAdmin))
-	mux.HandleFunc("POST /admin/links", auth(csrfProtect(wrap(h.handleAdminCreateLink))))
+	mux.HandleFunc("POST /admin/links", auth(h.csrfProtect(wrap(h.handleAdminCreateLink))))
 	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
-	mux.HandleFunc("POST /admin/links/{id}", auth(csrfProtect(wrap(h.handleAdminDeleteLink))))
-	mux.HandleFunc("POST /admin/links/{id}/files", auth(csrfProtect(wrap(h.handleAdminUpload))))
-	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(csrfProtect(wrap(h.handleAdminDeleteFile))))
+	mux.HandleFunc("POST /admin/links/{id}", auth(h.csrfProtect(wrap(h.handleAdminDeleteLink))))
+	mux.HandleFunc("POST /admin/links/{id}/files", auth(h.csrfProtect(wrap(h.handleAdminUpload))))
+	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(h.csrfProtect(wrap(h.handleAdminDeleteFile))))
 	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
 
 	// Public routes
