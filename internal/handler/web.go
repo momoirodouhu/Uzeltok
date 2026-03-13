@@ -98,11 +98,11 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Lin
 
 	rc, err := h.store.OpenFile(l, filename)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if err == store.ErrNotFound || err == store.ErrInvalidPath {
 			h.notFound(w, r)
 			return
 		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
 		return
 	}
 	defer rc.Close()
