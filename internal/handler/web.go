@@ -50,13 +50,13 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 		return methodOverride(h).ServeHTTP
 	}
 
-	// Admin routes (Basic Auth)
+	// Admin routes (Basic Auth + CSRF protection for mutations)
 	mux.HandleFunc("GET /admin", auth(h.handleAdmin))
-	mux.HandleFunc("POST /admin/links", auth(wrap(h.handleAdminCreateLink)))
+	mux.HandleFunc("POST /admin/links", auth(csrfProtect(wrap(h.handleAdminCreateLink))))
 	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
-	mux.HandleFunc("POST /admin/links/{id}", auth(wrap(h.handleAdminDeleteLink)))
-	mux.HandleFunc("POST /admin/links/{id}/files", auth(wrap(h.handleAdminUpload)))
-	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(wrap(h.handleAdminDeleteFile)))
+	mux.HandleFunc("POST /admin/links/{id}", auth(csrfProtect(wrap(h.handleAdminDeleteLink))))
+	mux.HandleFunc("POST /admin/links/{id}/files", auth(csrfProtect(wrap(h.handleAdminUpload))))
+	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(csrfProtect(wrap(h.handleAdminDeleteFile))))
 	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
 
 	// Public routes

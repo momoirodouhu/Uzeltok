@@ -64,11 +64,13 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Links []*model.Link
-		Host  string
+		Links     []*model.Link
+		Host      string
+		CSRFToken string
 	}{
-		Links: links,
-		Host:  r.Host,
+		Links:     links,
+		Host:      r.Host,
+		CSRFToken: ensureCSRFCookie(w, r),
 	}
 
 	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
@@ -92,10 +94,12 @@ func (h *Handler) handleAdminDetail(w http.ResponseWriter, r *http.Request) {
 
 	data := struct {
 		*model.Link
-		Host string
+		Host      string
+		CSRFToken string
 	}{
-		Link: l,
-		Host: r.Host,
+		Link:      l,
+		Host:      r.Host,
+		CSRFToken: ensureCSRFCookie(w, r),
 	}
 
 	if err := h.view.Render(w, "admin_link.gohtml", data); err != nil {

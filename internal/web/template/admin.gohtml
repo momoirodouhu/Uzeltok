@@ -28,6 +28,7 @@
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
         <h3 class="text-sm font-semibold text-slate-900 mb-4">Create New Link</h3>
         <form action="/admin/links" method="post" class="flex flex-col sm:flex-row gap-4 items-end">
+            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="flex-1 w-full space-y-1.5">
                 <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Expires In</label>
                 <select name="expires_in"
