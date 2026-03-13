@@ -29,6 +29,7 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		_, p, ok := r.BasicAuth()
 		if !ok || subtle.ConstantTimeCompare([]byte(p), []byte(pass)) != 1 {
+			time.Sleep(time.Second) // 気持ち程度のブルートフォース攻撃対策
 			w.Header().Set("Cache-Control", "no-store")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
