@@ -79,8 +79,8 @@ Uzeltok keeps it simple by relying exclusively on Environment Variables.
 | :--- | :--- | :--- |
 | `ADMIN_PASSWORD` | *(empty)* | **Required.** The password used to access the `/admin` dashboard. If left empty, all admin dashboard access is completely blocked (HTTP 401). |
 | `UPLOAD_MAX_BYTES` | `33554432` (32 MiB) | Maximum allowed upload size in bytes for both admin uploads and public drop uploads. Requests that exceed this limit are rejected. |
-| `UZELTOK_PORT` | `8080` | The port the HTTP server binds to. (not implemented) |
-| `UZELTOK_DATA_DIR` | `./data` | The directory where files and metadata will be persistently stored. (not implemented) |
+| `UZELTOK_PORT` | `8080` | The port the HTTP server binds to. |
+| `UZELTOK_DATA_DIR` | `./data` | The directory where files and metadata will be persistently stored. |
 
 ## 📖 Usage
 

@@ -13,7 +13,12 @@ import (
 )
 
 func main() {
-	ls := store.NewLinkStore("./data")
+	dataDir := "./data"
+	if d := os.Getenv("UZELTOK_DATA_DIR"); d != "" {
+		dataDir = d
+	}
+
+	ls := store.NewLinkStore(dataDir)
 
 	vp, err := web.NewProvider()
 	if err != nil {
@@ -36,14 +41,22 @@ func main() {
 	mux := http.NewServeMux()
 	srv := h.Handler(mux)
 
+	port := "8080"
+	if p := os.Getenv("UZELTOK_PORT"); p != "" {
+		if _, err := strconv.Atoi(p); err != nil {
+			log.Fatalf("invalid UZELTOK_PORT: %q", p)
+		}
+		port = p
+	}
+
 	if adminPass != "" {
 		fmt.Println("Admin access enabled (ADMIN_PASSWORD is set)")
 	} else {
 		fmt.Println("Admin access disabled (set ADMIN_PASSWORD to enable)")
 	}
 
-	fmt.Println("Server starting on http://localhost:8080...")
-	if err := http.ListenAndServe(":8080", srv); err != nil {
+	fmt.Printf("Server starting on http://localhost:%s...\n", port)
+	if err := http.ListenAndServe(":"+port, srv); err != nil {
 		fmt.Printf("Error starting server: %s\n", err)
 	}
 }
