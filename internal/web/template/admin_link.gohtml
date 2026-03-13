@@ -110,8 +110,8 @@
 <div class="px-6 sm:px-10 pt-4 pb-2">
     <h3 class="text-sm font-semibold text-slate-900 mb-3">Upload Files</h3>
     <form action="/admin/links/{{.ID}}/files" method="post" enctype="multipart/form-data">
-        <div class="relative group cursor-pointer mb-4">
-            <div
+        <div id="drop-zone" class="relative group cursor-pointer mb-4">
+            <div id="drop-inner"
                 class="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 transition-all group-hover:border-primary/50 group-hover:bg-white">
                 <div
                     class="h-12 w-12 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-primary group-hover:scale-110 transition-transform duration-300 shadow-sm">
@@ -217,6 +217,57 @@
 
         this.files = dt.files;
         renderFileList();
+    });
+
+    // Drag & Drop visual feedback
+    const dropZone = document.getElementById('drop-zone');
+    const dropInner = document.getElementById('drop-inner');
+    let dragCounter = 0;
+
+    function setDragActive(active) {
+        if (active) {
+            dropInner.style.borderColor = '#0e7490';
+            dropInner.style.backgroundColor = 'rgba(14, 116, 144, 0.06)';
+            dropInner.style.transform = 'scale(1.01)';
+        } else {
+            dropInner.style.borderColor = '';
+            dropInner.style.backgroundColor = '';
+            dropInner.style.transform = '';
+        }
+    }
+
+    dropZone.addEventListener('dragover', (e) => e.preventDefault());
+
+    dropZone.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        setDragActive(true);
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dragCounter--;
+        if (dragCounter === 0) setDragActive(false);
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        setDragActive(false);
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            Array.from(files).forEach(file => {
+                let isDuplicate = false;
+                for (let i = 0; i < dt.files.length; i++) {
+                    if (dt.files[i].name === file.name && dt.files[i].size === file.size && dt.files[i].lastModified === file.lastModified) {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+                if (!isDuplicate) dt.items.add(file);
+            });
+            fileInput.files = dt.files;
+            renderFileList();
+        }
     });
 
     document.addEventListener('DOMContentLoaded', () => {
