@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"uzeltok/internal/handler"
 	"uzeltok/internal/store"
@@ -21,7 +22,17 @@ func main() {
 
 	adminPass := os.Getenv("ADMIN_PASSWORD")
 
-	h := handler.NewHandler(ls, vp, adminPass)
+	const defaultMaxUploadBytes = 32 << 20 // 32MB
+	maxUploadBytes := int64(defaultMaxUploadBytes)
+	if s := os.Getenv("UPLOAD_MAX_BYTES"); s != "" {
+		n, err := strconv.ParseInt(s, 10, 64)
+		if err != nil || n <= 0 {
+			log.Fatalf("invalid UPLOAD_MAX_BYTES: %q", s)
+		}
+		maxUploadBytes = n
+	}
+
+	h := handler.NewHandler(ls, vp, adminPass, maxUploadBytes)
 	mux := http.NewServeMux()
 	srv := h.Handler(mux)
 

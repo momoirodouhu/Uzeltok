@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/subtle"
+	"errors"
 	"net/http"
 	"time"
 
@@ -29,7 +30,6 @@ func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		_, p, ok := r.BasicAuth()
 		if !ok || subtle.ConstantTimeCompare([]byte(p), []byte(pass)) != 1 {
-			time.Sleep(time.Second) // 気持ち程度のブルートフォース攻撃対策
 			w.Header().Set("Cache-Control", "no-store")
 			w.Header().Set("WWW-Authenticate", `Basic realm="Uzeltok Admin"`)
 			w.WriteHeader(http.StatusUnauthorized)
@@ -116,8 +116,13 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 32MB max
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes)
+	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+			return
+		}
 		http.Error(w, "failed to parse form: "+err.Error(), http.StatusBadRequest)
 		return
 	}

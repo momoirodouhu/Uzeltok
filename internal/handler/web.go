@@ -16,14 +16,15 @@ import (
 
 // Handler は全ての HTTP ハンドラが共有する依存を保持します。
 type Handler struct {
-	store     *store.LinkStore
-	view      *web.Provider
-	adminPass string
+	store          *store.LinkStore
+	view           *web.Provider
+	adminPass      string
+	maxUploadBytes int64
 }
 
 // NewHandler は新しい Handler を生成します。
-func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string) *Handler {
-	return &Handler{store: s, view: v, adminPass: adminPass}
+func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) *Handler {
+	return &Handler{store: s, view: v, adminPass: adminPass, maxUploadBytes: maxUploadBytes}
 }
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
