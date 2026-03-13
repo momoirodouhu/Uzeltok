@@ -21,28 +21,49 @@ func NewLinkStore(baseDir string) *LinkStore {
 	return &LinkStore{baseDir: baseDir}
 }
 
+// BaseDir returns the root directory where links and files are stored.
+func (s *LinkStore) BaseDir() string {
+	return s.baseDir
+}
+
+// FilePath returns the validated absolute path for a file in a link directory.
+func (s *LinkStore) FilePath(linkID, filename string) (string, error) {
+	return s.resolveFilePath(linkID, filename)
+}
+
 var (
 	ErrNotFound    = errors.New("not found")
 	ErrInvalidPath = errors.New("invalid path")
 )
 
-// GetLink は baseDir/<uuid>/_metadata.json を探して
-// 見つかればパースして返します。見つからなければ ErrNotFound を返します。
-func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
+// GetLinkMetadata loads only _metadata.json for a link without scanning files.
+func (s *LinkStore) GetLinkMetadata(uuid string) (model.Metadata, error) {
 	if uuid == "" {
-		return nil, ErrNotFound
+		return model.Metadata{}, ErrNotFound
 	}
 
 	metaPath := filepath.Join(s.baseDir, uuid, "_metadata.json")
 	b, err := os.ReadFile(metaPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, ErrNotFound
+			return model.Metadata{}, ErrNotFound
 		}
-		return nil, err
+		return model.Metadata{}, err
 	}
+
 	var md model.Metadata
 	if err := json.Unmarshal(b, &md); err != nil {
+		return model.Metadata{}, err
+	}
+
+	return md, nil
+}
+
+// GetLink は baseDir/<uuid>/_metadata.json を探して
+// 見つかればパースして返します。見つからなければ ErrNotFound を返します。
+func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
+	md, err := s.GetLinkMetadata(uuid)
+	if err != nil {
 		return nil, err
 	}
 
@@ -113,31 +134,9 @@ func (s *LinkStore) OpenFile(l *model.Link, filename string) (io.ReadCloser, err
 	if l == nil || filename == "" {
 		return nil, ErrInvalidPath
 	}
-	// 基本的なサニタイズ: 絶対パスを拒否し、解決後のパスが baseDir 内に留まることを確認
-	if filepath.IsAbs(filename) {
-		return nil, ErrInvalidPath
-	}
-
-	baseAbs, err := filepath.Abs(s.baseDir)
+	p, err := s.resolveFilePath(l.ID, filename)
 	if err != nil {
 		return nil, err
-	}
-
-	// リンク専用のディレクトリを基準とする
-	expectedBase := filepath.Join(baseAbs, l.ID)
-	p := filepath.Join(expectedBase, filename)
-	p = filepath.Clean(p)
-
-	// expectedBase を基準に相対パスを取得し、".." で上方向に出ていないことを確認
-	rel, err := filepath.Rel(expectedBase, p)
-	if err != nil {
-		return nil, ErrInvalidPath
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return nil, ErrInvalidPath
-	}
-	if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
-		return nil, ErrInvalidPath
 	}
 	f, err := os.Open(p)
 	if err != nil {
@@ -171,28 +170,9 @@ func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
 	if linkID == "" || filename == "" {
 		return ErrInvalidPath
 	}
-	if filepath.IsAbs(filename) {
-		return ErrInvalidPath
-	}
-
-	baseAbs, err := filepath.Abs(s.baseDir)
+	p, err := s.resolveFilePath(linkID, filename)
 	if err != nil {
 		return err
-	}
-
-	expectedBase := filepath.Join(baseAbs, linkID)
-	p := filepath.Join(expectedBase, filename)
-	p = filepath.Clean(p)
-
-	rel, err := filepath.Rel(expectedBase, p)
-	if err != nil {
-		return ErrInvalidPath
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return ErrInvalidPath
-	}
-	if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
-		return ErrInvalidPath
 	}
 
 	f, err := os.Create(p)
@@ -211,28 +191,9 @@ func (s *LinkStore) DeleteFile(linkID, filename string) error {
 	if linkID == "" || filename == "" {
 		return ErrInvalidPath
 	}
-	if filepath.IsAbs(filename) {
-		return ErrInvalidPath
-	}
-
-	baseAbs, err := filepath.Abs(s.baseDir)
+	p, err := s.resolveFilePath(linkID, filename)
 	if err != nil {
 		return err
-	}
-
-	expectedBase := filepath.Join(baseAbs, linkID)
-	p := filepath.Join(expectedBase, filename)
-	p = filepath.Clean(p)
-
-	rel, err := filepath.Rel(expectedBase, p)
-	if err != nil {
-		return ErrInvalidPath
-	}
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
-		return ErrInvalidPath
-	}
-	if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
-		return ErrInvalidPath
 	}
 
 	err = os.Remove(p)
@@ -243,6 +204,34 @@ func (s *LinkStore) DeleteFile(linkID, filename string) error {
 		return err
 	}
 	return nil
+}
+
+func (s *LinkStore) resolveFilePath(linkID, filename string) (string, error) {
+	if filepath.IsAbs(filename) {
+		return "", ErrInvalidPath
+	}
+
+	baseAbs, err := filepath.Abs(s.baseDir)
+	if err != nil {
+		return "", err
+	}
+
+	expectedBase := filepath.Join(baseAbs, linkID)
+	p := filepath.Join(expectedBase, filename)
+	p = filepath.Clean(p)
+
+	rel, err := filepath.Rel(expectedBase, p)
+	if err != nil {
+		return "", ErrInvalidPath
+	}
+	if rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return "", ErrInvalidPath
+	}
+	if rel == "_metadata.json" || strings.HasPrefix(rel, "_metadata.json"+string(os.PathSeparator)) {
+		return "", ErrInvalidPath
+	}
+
+	return p, nil
 }
 
 // DeleteLink はリンクディレクトリ全体を _trash ディレクトリに移動します（論理削除）。

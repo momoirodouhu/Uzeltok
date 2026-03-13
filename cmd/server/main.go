@@ -37,7 +37,10 @@ func main() {
 		maxUploadBytes = n
 	}
 
-	h := handler.NewHandler(ls, vp, adminPass, maxUploadBytes)
+	h, err := handler.NewHandler(ls, vp, adminPass, maxUploadBytes)
+	if err != nil {
+		log.Fatalf("failed to initialize handler: %v", err)
+	}
 	mux := http.NewServeMux()
 	srv := h.Handler(mux)
 

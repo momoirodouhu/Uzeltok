@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"crypto/rand"
 	"bytes"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"net/http"
@@ -22,15 +22,21 @@ type Handler struct {
 	adminPass      string
 	maxUploadBytes int64
 	csrfSecret     [32]byte
+	tusHTTP        http.Handler
 }
 
 // NewHandler は新しい Handler を生成します。
-func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) *Handler {
+func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) (*Handler, error) {
 	h := &Handler{store: s, view: v, adminPass: adminPass, maxUploadBytes: maxUploadBytes}
 	if _, err := rand.Read(h.csrfSecret[:]); err != nil {
-		panic("failed to initialize CSRF secret")
+		return nil, fmt.Errorf("failed to initialize CSRF secret: %w", err)
 	}
-	return h
+
+	if err := h.initTus(); err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
@@ -58,12 +64,18 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 	// Admin routes (Basic Auth + CSRF protection for mutations)
 	mux.HandleFunc("GET /admin", auth(h.handleAdmin))
+	mux.HandleFunc("POST /admin/tus/gc", auth(h.csrfProtect(h.handleAdminRunTusGC)))
 	mux.HandleFunc("POST /admin/links", auth(h.csrfProtect(wrap(h.handleAdminCreateLink))))
 	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
 	mux.HandleFunc("POST /admin/links/{id}", auth(h.csrfProtect(wrap(h.handleAdminDeleteLink))))
 	mux.HandleFunc("POST /admin/links/{id}/files", auth(h.csrfProtect(h.handleAdminUpload)))
 	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(h.csrfProtect(wrap(h.handleAdminDeleteFile))))
 	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
+	mux.HandleFunc("OPTIONS /admin/links/{id}/tus", auth(h.handleAdminTus))
+	mux.HandleFunc("HEAD /admin/links/{id}/tus/{uploadID...}", auth(h.handleAdminTus))
+	mux.HandleFunc("POST /admin/links/{id}/tus", auth(h.csrfProtect(h.handleAdminTus)))
+	mux.HandleFunc("PATCH /admin/links/{id}/tus/{uploadID...}", auth(h.csrfProtect(h.handleAdminTus)))
+	mux.HandleFunc("DELETE /admin/links/{id}/tus/{uploadID...}", auth(h.csrfProtect(h.handleAdminTus)))
 
 	// Public routes
 	mux.HandleFunc("GET /{$}", h.handleIndex)
@@ -79,6 +91,11 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
 	mux.HandleFunc("POST /{id}/files", h.handlePublicUpload)
 	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
+	mux.HandleFunc("OPTIONS /{id}/tus", h.handlePublicTus)
+	mux.HandleFunc("POST /{id}/tus", h.handlePublicTus)
+	mux.HandleFunc("HEAD /{id}/tus/{uploadID...}", h.handlePublicTus)
+	mux.HandleFunc("PATCH /{id}/tus/{uploadID...}", h.handlePublicTus)
+	mux.HandleFunc("DELETE /{id}/tus/{uploadID...}", h.handlePublicTus)
 }
 
 // Handler はセキュリティヘッダー付きの http.Handler を返します。

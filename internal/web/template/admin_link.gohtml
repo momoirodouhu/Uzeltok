@@ -110,7 +110,7 @@
 <!-- Upload form -->
 <div class="px-6 sm:px-10 pt-4 pb-2">
     <h3 class="text-sm font-semibold text-slate-900 mb-3">Upload Files</h3>
-    <form action="/admin/links/{{.ID}}/files?csrf_token={{.CSRFToken}}" method="post" enctype="multipart/form-data">
+    <form id="upload-form" action="/admin/links/{{.ID}}/files?csrf_token={{.CSRFToken}}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
         <div id="drop-zone" class="relative group cursor-pointer mb-4">
             <div id="drop-inner"
@@ -136,15 +136,21 @@
             <span>Upload</span>
             <span class="material-symbols-outlined text-[18px]">arrow_upward</span>
         </button>
+        <p id="upload-status" class="text-xs text-slate-500 mt-2 hidden"></p>
     </form>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@3/dist/tus.min.js"></script>
 <script>
     const dt = new DataTransfer();
+    const form = document.getElementById('upload-form');
     const fileInput = document.getElementById('file-input');
     const fileList = document.getElementById('file-list');
     const uploadPrompt = document.getElementById('upload-prompt');
     const submitBtn = document.getElementById('submit-btn');
+    const uploadStatus = document.getElementById('upload-status');
+    const csrfToken = '{{.CSRFToken}}';
+    const tusEndpoint = '/admin/links/{{.ID}}/tus';
 
     function renderFileList() {
         fileList.innerHTML = '';
@@ -219,6 +225,73 @@
 
         this.files = dt.files;
         renderFileList();
+    });
+
+    function setUploadingState(uploading) {
+        submitBtn.disabled = uploading || dt.files.length === 0;
+        fileInput.disabled = uploading;
+        if (uploading) {
+            uploadStatus.classList.remove('hidden');
+        }
+    }
+
+    function uploadWithTus(file) {
+        return new Promise((resolve, reject) => {
+            const upload = new tus.Upload(file, {
+                endpoint: tusEndpoint,
+                retryDelays: [0, 1000, 3000, 5000],
+                chunkSize: 5 * 1024 * 1024,
+                metadata: {
+                    filename: file.name,
+                    filetype: file.type || 'application/octet-stream'
+                },
+                headers: {
+                    'X-CSRF-Token': csrfToken
+                },
+                removeFingerprintOnSuccess: true,
+                onError: reject,
+                onProgress: (uploaded, total) => {
+                    const pct = total > 0 ? Math.floor((uploaded / total) * 100) : 0;
+                    uploadStatus.textContent = 'Uploading ' + file.name + ' (' + pct + '%)';
+                },
+                onSuccess: resolve
+            });
+
+            upload.findPreviousUploads().then((previousUploads) => {
+                if (previousUploads.length > 0) {
+                    upload.resumeFromPreviousUpload(previousUploads[0]);
+                }
+                upload.start();
+            }).catch(reject);
+        });
+    }
+
+    form.addEventListener('submit', async (e) => {
+        if (dt.files.length === 0) {
+            e.preventDefault();
+            return;
+        }
+        if (typeof tus === 'undefined') {
+            uploadStatus.classList.remove('hidden');
+            uploadStatus.textContent = 'tus client unavailable. Falling back to standard upload...';
+            return;
+        }
+
+        e.preventDefault();
+
+        try {
+            setUploadingState(true);
+            const files = Array.from(dt.files);
+            for (let i = 0; i < files.length; i++) {
+                uploadStatus.textContent = 'Preparing ' + files[i].name + ' (' + (i + 1) + '/' + files.length + ')';
+                await uploadWithTus(files[i]);
+            }
+            window.location.href = '/admin/links/{{.ID}}?success=upload';
+        } catch (err) {
+            uploadStatus.classList.remove('hidden');
+            uploadStatus.textContent = 'Upload failed: ' + (err && err.message ? err.message : 'unknown error');
+            setUploadingState(false);
+        }
     });
 
     // Drag & Drop visual feedback

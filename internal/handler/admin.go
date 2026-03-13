@@ -4,6 +4,8 @@ import (
 	"crypto/subtle"
 	"errors"
 	"net/http"
+	"path/filepath"
+	"strconv"
 	"time"
 
 	"uzeltok/internal/model"
@@ -64,18 +66,41 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := struct {
-		Links     []*model.Link
-		Host      string
-		CSRFToken string
+		Links        []*model.Link
+		Host         string
+		CSRFToken    string
+		TusGCStatus  string
+		TusGCDeleted string
 	}{
-		Links:     links,
-		Host:      r.Host,
-		CSRFToken: h.ensureCSRFCookie(w, r),
+		Links:        links,
+		Host:         r.Host,
+		CSRFToken:    h.ensureCSRFCookie(w, r),
+		TusGCStatus:  r.URL.Query().Get("tus_gc"),
+		TusGCDeleted: r.URL.Query().Get("deleted"),
 	}
 
 	if err := h.view.Render(w, "admin.gohtml", data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func (h *Handler) handleAdminRunTusGC(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+
+	gcCfg := loadTusGCConfig()
+	if gcCfg.incompleteTTL <= 0 {
+		http.Redirect(w, r, "/admin?tus_gc=disabled", http.StatusSeeOther)
+		return
+	}
+
+	tusDir := filepath.Join(h.store.BaseDir(), "_tus")
+	deleted, err := cleanupStaleTusUploads(tusDir, gcCfg.incompleteTTL)
+	if err != nil {
+		http.Redirect(w, r, "/admin?tus_gc=error", http.StatusSeeOther)
+		return
+	}
+
+	http.Redirect(w, r, "/admin?tus_gc=ok&deleted="+strconv.Itoa(deleted), http.StatusSeeOther)
 }
 
 // handleAdminDetail はリンク詳細画面を返します。

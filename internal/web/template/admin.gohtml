@@ -24,9 +24,39 @@
     </p>
 </div>
 
+{{if eq .TusGCStatus "ok"}}
+<div class="px-6 sm:px-10 pb-4">
+    <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+        tus GC completed. Deleted {{if .TusGCDeleted}}{{.TusGCDeleted}}{{else}}0{{end}} stale file(s).
+    </div>
+</div>
+{{else if eq .TusGCStatus "error"}}
+<div class="px-6 sm:px-10 pb-4">
+    <div class="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        tus GC failed. Please check server logs and try again.
+    </div>
+</div>
+{{else if eq .TusGCStatus "disabled"}}
+<div class="px-6 sm:px-10 pb-4">
+    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        tus GC is disabled because TUS_INCOMPLETE_TTL is 0.
+    </div>
+</div>
+{{end}}
+
 <div class="px-6 sm:px-10 pb-6">
     <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-        <h3 class="text-sm font-semibold text-slate-900 mb-4">Create New Link</h3>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 class="text-sm font-semibold text-slate-900">Create New Link</h3>
+            <form action="/admin/tus/gc" method="post">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                <button type="submit"
+                    class="h-9 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-all flex items-center justify-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">cleaning_services</span>
+                    Run tus GC now
+                </button>
+            </form>
+        </div>
         <form action="/admin/links" method="post" class="flex flex-col sm:flex-row gap-4 items-end">
             <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
             <div class="flex-1 w-full space-y-1.5">
