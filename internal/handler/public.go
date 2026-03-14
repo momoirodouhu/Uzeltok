@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"math"
@@ -78,40 +77,9 @@ func (h *Handler) handlePublicUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.ContentLength > h.maxUploadBytes {
-		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+	if status, msg := h.saveMultipartUpload(w, r, l.ID); status != 0 {
+		http.Error(w, msg, status)
 		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes)
-	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
-		var mbe *http.MaxBytesError
-		if errors.As(err, &mbe) {
-			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-			return
-		}
-		http.Error(w, "failed to parse form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	files := r.MultipartForm.File["files"]
-	if len(files) == 0 {
-		http.Error(w, "no files provided", http.StatusBadRequest)
-		return
-	}
-
-	for _, fh := range files {
-		f, err := fh.Open()
-		if err != nil {
-			http.Error(w, "failed to read file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = h.store.SaveFile(l.ID, fh.Filename, f)
-		f.Close()
-		if err != nil {
-			http.Error(w, "failed to save file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 
 	// GET /{id} にリダイレクトして完了を示す

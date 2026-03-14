@@ -164,27 +164,6 @@ func (s *LinkStore) CreateLink(l *model.Link) error {
 	return os.WriteFile(filepath.Join(dir, "_metadata.json"), b, 0o644)
 }
 
-// SaveFile はリンクディレクトリにファイルを書き込みます。
-// パスバリデーションは OpenFile と同等です。
-func (s *LinkStore) SaveFile(linkID, filename string, r io.Reader) error {
-	if linkID == "" || filename == "" {
-		return ErrInvalidPath
-	}
-	p, err := s.resolveFilePath(linkID, filename)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Create(p)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = io.Copy(f, r)
-	return err
-}
-
 // DeleteFile はリンクディレクトリからファイルを削除します。
 // パスバリデーションは OpenFile と同等です。
 func (s *LinkStore) DeleteFile(linkID, filename string) error {

@@ -97,6 +97,18 @@ func isMultipartRequest(r *http.Request) bool {
 	return strings.EqualFold(mediaType, "multipart/form-data")
 }
 
+// methodOverride は POST リクエストの _method フォームフィールドで HTTP メソッドを上書きするミドルウェアです。
+func methodOverride(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			if override := r.FormValue("_method"); override != "" {
+				r.Method = strings.ToUpper(override)
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // securityHeaders は全レスポンスに共通のセキュリティヘッダーを設定するミドルウェアです。
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

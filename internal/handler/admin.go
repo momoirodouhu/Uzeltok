@@ -2,7 +2,6 @@ package handler
 
 import (
 	"crypto/subtle"
-	"errors"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -54,7 +53,7 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	links, err := h.store.ListLinks()
+	links, err := h.links.ListLinks()
 	if err != nil {
 		http.Error(w, "Failed to list links", http.StatusInternalServerError)
 		return
@@ -93,7 +92,7 @@ func (h *Handler) handleAdminRunTusGC(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tusDir := filepath.Join(h.store.BaseDir(), "_tus")
+	tusDir := filepath.Join(h.links.BaseDir(), "_tus")
 	deleted, err := cleanupStaleTusUploads(tusDir, gcCfg.incompleteTTL)
 	if err != nil {
 		http.Redirect(w, r, "/admin?tus_gc=error", http.StatusSeeOther)
@@ -145,40 +144,9 @@ func (h *Handler) handleAdminUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.ContentLength > h.maxUploadBytes {
-		http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
+	if status, msg := h.saveMultipartUpload(w, r, l.ID); status != 0 {
+		http.Error(w, msg, status)
 		return
-	}
-
-	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes)
-	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
-		var mbe *http.MaxBytesError
-		if errors.As(err, &mbe) {
-			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
-			return
-		}
-		http.Error(w, "failed to parse form: "+err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	files := r.MultipartForm.File["files"]
-	if len(files) == 0 {
-		http.Error(w, "no files provided", http.StatusBadRequest)
-		return
-	}
-
-	for _, fh := range files {
-		f, err := fh.Open()
-		if err != nil {
-			http.Error(w, "failed to read file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = h.store.SaveFile(l.ID, fh.Filename, f)
-		f.Close()
-		if err != nil {
-			http.Error(w, "failed to save file: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 
 	http.Redirect(w, r, "/admin/links/"+l.ID+"?success=upload", http.StatusSeeOther)
@@ -203,7 +171,7 @@ func (h *Handler) handleAdminDeleteFile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.store.DeleteFile(l.ID, filename); err != nil {
+	if err := h.links.DeleteFile(l.ID, filename); err != nil {
 		if err == store.ErrNotFound {
 			h.notFound(w, r)
 			return
@@ -270,7 +238,7 @@ func (h *Handler) handleAdminCreateLink(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	if err := h.store.CreateLink(l); err != nil {
+	if err := h.links.CreateLink(l); err != nil {
 		http.Error(w, "Failed to create link: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -291,7 +259,7 @@ func (h *Handler) handleAdminDeleteLink(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := h.store.DeleteLink(l.ID); err != nil {
+	if err := h.links.DeleteLink(l.ID); err != nil {
 		if err == store.ErrNotFound {
 			http.Error(w, "link not found", http.StatusNotFound)
 			return

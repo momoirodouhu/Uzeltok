@@ -3,7 +3,6 @@ package handler
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -20,12 +19,12 @@ import (
 )
 
 const (
-	tusMetaLinkID = "link_id"
-	tusMetaScope  = "scope"
-	tusMetaFile   = "filename"
-	tusScopeAdmin = "admin"
-	tusScopeDrop  = "drop"
-	tusIDAlphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+	tusMetaLinkID           = "link_id"
+	tusMetaScope            = "scope"
+	tusMetaFile             = "filename"
+	tusScopeAdmin           = "admin"
+	tusScopeDrop            = "drop"
+	tusIDAlphabet           = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 	tusDefaultIncompleteTTL = 24 * time.Hour
 )
 
@@ -40,7 +39,7 @@ type tusGCConfig struct {
 }
 
 func (h *Handler) initTus() error {
-	tusDir := filepath.Join(h.store.BaseDir(), "_tus")
+	tusDir := filepath.Join(h.links.BaseDir(), "_tus")
 	if err := os.MkdirAll(tusDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create tus dir: %w", err)
 	}
@@ -57,11 +56,11 @@ func (h *Handler) initTus() error {
 	fileStore.UseIn(composer)
 
 	unrouted, err := tushandler.NewUnroutedHandler(tushandler.Config{
-		BasePath:                 "/",
-		StoreComposer:            composer,
-		MaxSize:                  h.maxUploadBytes,
-		DisableDownload:          true,
-		PreUploadCreateCallback:  h.onTusPreCreate,
+		BasePath:                  "/",
+		StoreComposer:             composer,
+		MaxSize:                   h.maxUploadBytes,
+		DisableDownload:           true,
+		PreUploadCreateCallback:   h.onTusPreCreate,
 		PreFinishResponseCallback: h.onTusPreFinish,
 	})
 	if err != nil {
@@ -159,7 +158,7 @@ func (h *Handler) onTusPreCreate(hook tushandler.HookEvent) (tushandler.HTTPResp
 	if err != nil {
 		return tushandler.HTTPResponse{}, tushandler.FileInfoChanges{}, tushandler.NewError("ERR_UPLOAD_INIT", "failed to initialize upload", http.StatusInternalServerError)
 	}
-	_, err = h.store.FilePath(target.linkID, filename)
+	_, err = h.links.FilePath(target.linkID, filename)
 	if err != nil {
 		return tushandler.HTTPResponse{}, tushandler.FileInfoChanges{}, tushandler.NewError("ERR_INVALID_UPLOAD", "invalid upload target", http.StatusBadRequest)
 	}
@@ -191,12 +190,7 @@ func (h *Handler) onTusPreFinish(hook tushandler.HookEvent) (tushandler.HTTPResp
 		return tushandler.HTTPResponse{}, tushandler.NewError("ERR_UPLOAD_INVALID", "missing upload storage path", http.StatusInternalServerError)
 	}
 
-	dstPath, err := h.store.FilePath(linkID, filename)
-	if err != nil {
-		return tushandler.HTTPResponse{}, tushandler.NewError("ERR_UPLOAD_INVALID", "invalid upload target", http.StatusBadRequest)
-	}
-
-	if err := copyFileAtomically(srcPath, dstPath); err != nil {
+	if err := h.uploads.PersistTusUpload(linkID, filename, srcPath); err != nil {
 		return tushandler.HTTPResponse{}, tushandler.NewError("ERR_UPLOAD_SAVE", "failed to persist uploaded file", http.StatusInternalServerError)
 	}
 
@@ -218,49 +212,13 @@ func removeEmptyTusParents(dir string) {
 	}
 }
 
-func copyFileAtomically(srcPath, dstPath string) error {
-	src, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	defer src.Close()
-
-	dir := filepath.Dir(dstPath)
-	tmp, err := os.CreateTemp(dir, ".uzeltok-upload-*")
-	if err != nil {
-		return err
-	}
-	tmpPath := tmp.Name()
-	cleanup := true
-	defer func() {
-		if cleanup {
-			_ = os.Remove(tmpPath)
-		}
-	}()
-
-	if _, err := io.Copy(tmp, src); err != nil {
-		_ = tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-
-	if err := os.Rename(tmpPath, dstPath); err != nil {
-		return err
-	}
-
-	cleanup = false
-	return nil
-}
-
 func (h *Handler) validateTusRoute(rawURI string, requireDrop bool) (tusRouteTarget, error) {
 	target, err := parseTusRoute(rawURI)
 	if err != nil {
 		return tusRouteTarget{}, err
 	}
 
-	md, err := h.store.GetLinkMetadata(target.linkID)
+	md, err := h.links.GetLinkMetadata(target.linkID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
 			return tusRouteTarget{}, tushandler.NewError("ERR_UPLOAD_NOT_FOUND", "link not found", http.StatusNotFound)

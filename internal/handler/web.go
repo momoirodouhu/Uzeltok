@@ -1,23 +1,21 @@
 package handler
 
 import (
-	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"strings"
-	"time"
 
 	"uzeltok/internal/model"
+	"uzeltok/internal/service"
 	"uzeltok/internal/store"
 	"uzeltok/internal/web"
 )
 
 // Handler は全ての HTTP ハンドラが共有する依存を保持します。
 type Handler struct {
-	store          *store.LinkStore
+	links          *service.LinkService
+	uploads        *service.UploadService
+	fileDelivery   *fileDelivery
 	view           *web.Provider
 	adminPass      string
 	maxUploadBytes int64
@@ -27,7 +25,15 @@ type Handler struct {
 
 // NewHandler は新しい Handler を生成します。
 func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) (*Handler, error) {
-	h := &Handler{store: s, view: v, adminPass: adminPass, maxUploadBytes: maxUploadBytes}
+	links := service.NewLinkService(s)
+	h := &Handler{
+		links:          links,
+		uploads:        service.NewUploadService(links),
+		fileDelivery:   newFileDelivery(links),
+		view:           v,
+		adminPass:      adminPass,
+		maxUploadBytes: maxUploadBytes,
+	}
 	if _, err := rand.Read(h.csrfSecret[:]); err != nil {
 		return nil, fmt.Errorf("failed to initialize CSRF secret: %w", err)
 	}
@@ -41,61 +47,8 @@ func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUpload
 
 // RegisterRoutes は http.ServeMux に必要なパスを登録します。
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	auth := func(next http.HandlerFunc) http.HandlerFunc {
-		return h.adminAuth(next)
-	}
-
-	// Method override middleware for HTML forms
-	methodOverride := func(next http.Handler) http.HandlerFunc {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodPost {
-				if override := r.FormValue("_method"); override != "" {
-					r.Method = strings.ToUpper(override)
-				}
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-
-	// Wrapper to apply method override to specific routes
-	wrap := func(h http.HandlerFunc) http.HandlerFunc {
-		return methodOverride(h).ServeHTTP
-	}
-
-	// Admin routes (Basic Auth + CSRF protection for mutations)
-	mux.HandleFunc("GET /admin", auth(h.handleAdmin))
-	mux.HandleFunc("POST /admin/tus/gc", auth(h.csrfProtect(h.handleAdminRunTusGC)))
-	mux.HandleFunc("POST /admin/links", auth(h.csrfProtect(wrap(h.handleAdminCreateLink))))
-	mux.HandleFunc("GET /admin/links/{id}", auth(h.handleAdminDetail))
-	mux.HandleFunc("POST /admin/links/{id}", auth(h.csrfProtect(wrap(h.handleAdminDeleteLink))))
-	mux.HandleFunc("POST /admin/links/{id}/files", auth(h.csrfProtect(h.handleAdminUpload)))
-	mux.HandleFunc("POST /admin/links/{id}/files/{filename}", auth(h.csrfProtect(wrap(h.handleAdminDeleteFile))))
-	mux.HandleFunc("GET /admin/links/{id}/files/{filename}", auth(h.handleAdminDownloadFile))
-	mux.HandleFunc("OPTIONS /admin/links/{id}/tus", auth(h.handleAdminTus))
-	mux.HandleFunc("HEAD /admin/links/{id}/tus/{uploadID...}", auth(h.handleAdminTus))
-	mux.HandleFunc("POST /admin/links/{id}/tus", auth(h.csrfProtect(h.handleAdminTus)))
-	mux.HandleFunc("PATCH /admin/links/{id}/tus/{uploadID...}", auth(h.csrfProtect(h.handleAdminTus)))
-	mux.HandleFunc("DELETE /admin/links/{id}/tus/{uploadID...}", auth(h.csrfProtect(h.handleAdminTus)))
-
-	// Public routes
-	mux.HandleFunc("GET /{$}", h.handleIndex)
-	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=604800")
-		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=604800")
-		fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
-	})
-	mux.HandleFunc("GET /{id}", h.handleLinkDetail)
-	mux.HandleFunc("POST /{id}/files", h.handlePublicUpload)
-	mux.HandleFunc("GET /{id}/files/{filename}", h.handlePublicDownload)
-	mux.HandleFunc("OPTIONS /{id}/tus", h.handlePublicTus)
-	mux.HandleFunc("POST /{id}/tus", h.handlePublicTus)
-	mux.HandleFunc("HEAD /{id}/tus/{uploadID...}", h.handlePublicTus)
-	mux.HandleFunc("PATCH /{id}/tus/{uploadID...}", h.handlePublicTus)
-	mux.HandleFunc("DELETE /{id}/tus/{uploadID...}", h.handlePublicTus)
+	h.registerAdminRoutes(mux)
+	h.registerPublicRoutes(mux)
 }
 
 // Handler はセキュリティヘッダー付きの http.Handler を返します。
@@ -108,75 +61,12 @@ func (h *Handler) Handler(mux *http.ServeMux) http.Handler {
 
 // fetchLink はストアからリンクを取得します。
 func (h *Handler) fetchLink(uuid string) (*model.Link, error) {
-	return h.store.GetLink(uuid)
+	return h.links.GetLink(uuid)
 }
 
 // serveFile は指定されたリンクとファイル名に対してファイルレスポンスを返します。
 func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, l *model.Link, filename string) {
-	if r.Method != http.MethodGet && r.Method != http.MethodHead {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; sandbox")
-
-	rc, err := h.store.OpenFile(l, filename)
-	if err != nil {
-		if err == store.ErrNotFound || err == store.ErrInvalidPath {
-			h.notFound(w, r)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	defer rc.Close()
-
-	var modtime time.Time
-	var size int64
-
-	fallbackModtime := time.Time{}
-	for _, f := range l.Files {
-		if f.Name == filename {
-			fallbackModtime = f.Timestamp
-			size = f.Size
-			break
-		}
-	}
-
-	if rs, ok := rc.(io.ReadSeeker); ok {
-		if f, ok := rc.(*os.File); ok {
-			if st, err := f.Stat(); err == nil {
-				modtime = st.ModTime()
-				size = st.Size()
-			}
-		}
-
-		if modtime.IsZero() {
-			modtime = fallbackModtime
-		}
-
-		w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(filename)))
-
-		http.ServeContent(w, r, filename, modtime, rs)
-		return
-	}
-
-	data, err := io.ReadAll(rc)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if size == 0 {
-		size = int64(len(data))
-	}
-	modtime = fallbackModtime
-
-	w.Header().Set("ETag", fmt.Sprintf(`"%x-%x"`, modtime.UnixNano(), size))
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(filename)))
-
-	http.ServeContent(w, r, filename, modtime, bytes.NewReader(data))
+	h.fileDelivery.Serve(w, r, l, filename, h.notFound)
 }
 
 // notFound は 404 Not Found ページを返します。
