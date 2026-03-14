@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
+	"math"
 	"net/http"
 
 	"uzeltok/internal/model"
@@ -165,17 +166,38 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 
 	data := struct {
 		*model.Link
-		Host    string
-		BaseURL string
+		Host           string
+		BaseURL        string
+		MaxUploadLabel string
 	}{
-		Link:    l,
-		Host:    r.Host,
-		BaseURL: fmt.Sprintf("%s://%s", scheme, r.Host),
+		Link:           l,
+		Host:           r.Host,
+		BaseURL:        fmt.Sprintf("%s://%s", scheme, r.Host),
+		MaxUploadLabel: humanizeBytesIEC(h.maxUploadBytes),
 	}
 
 	if err := h.view.Render(w, tmpl, data); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func humanizeBytesIEC(n int64) string {
+	if n < 1024 {
+		return fmt.Sprintf("%d B", n)
+	}
+
+	units := []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB"}
+	value := float64(n)
+	unitIdx := -1
+	for value >= 1024 && unitIdx < len(units)-1 {
+		value /= 1024
+		unitIdx++
+	}
+
+	if unitIdx >= 0 && math.Abs(value-math.Round(value)) < 0.05 {
+		return fmt.Sprintf("%.0f %s", value, units[unitIdx])
+	}
+	return fmt.Sprintf("%.1f %s", value, units[unitIdx])
 }
 
 // generateETag はリンク情報とそのファイルリストからETagを生成します。
