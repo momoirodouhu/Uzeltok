@@ -19,13 +19,12 @@ import (
 )
 
 const (
-	tusMetaLinkID           = "link_id"
-	tusMetaScope            = "scope"
-	tusMetaFile             = "filename"
-	tusScopeAdmin           = "admin"
-	tusScopeDrop            = "drop"
-	tusIDAlphabet           = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-	tusDefaultIncompleteTTL = 24 * time.Hour
+	tusMetaLinkID = "link_id"
+	tusMetaScope  = "scope"
+	tusMetaFile   = "filename"
+	tusScopeAdmin = "admin"
+	tusScopeDrop  = "drop"
+	tusIDAlphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 )
 
 type tusRouteTarget struct {
@@ -34,19 +33,14 @@ type tusRouteTarget struct {
 	uploadID string
 }
 
-type tusGCConfig struct {
-	incompleteTTL time.Duration
-}
-
 func (h *Handler) initTus() error {
 	tusDir := filepath.Join(h.links.BaseDir(), "_tus")
 	if err := os.MkdirAll(tusDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create tus dir: %w", err)
 	}
 
-	gcCfg := loadTusGCConfig()
-	if gcCfg.incompleteTTL > 0 {
-		if _, err := cleanupStaleTusUploads(tusDir, gcCfg.incompleteTTL); err != nil {
+	if h.cfg.TusIncompleteTTL > 0 {
+		if _, err := cleanupStaleTusUploads(tusDir, h.cfg.TusIncompleteTTL); err != nil {
 			return fmt.Errorf("failed to cleanup stale tus uploads: %w", err)
 		}
 	}
@@ -58,7 +52,7 @@ func (h *Handler) initTus() error {
 	unrouted, err := tushandler.NewUnroutedHandler(tushandler.Config{
 		BasePath:                  "/",
 		StoreComposer:             composer,
-		MaxSize:                   h.maxUploadBytes,
+		MaxSize:                   h.cfg.MaxUploadBytes,
 		DisableDownload:           true,
 		PreUploadCreateCallback:   h.onTusPreCreate,
 		PreFinishResponseCallback: h.onTusPreFinish,
@@ -83,19 +77,6 @@ func (h *Handler) initTus() error {
 	}))
 
 	return nil
-}
-
-func loadTusGCConfig() tusGCConfig {
-	cfg := tusGCConfig{
-		incompleteTTL: tusDefaultIncompleteTTL,
-	}
-
-	if raw := strings.TrimSpace(os.Getenv("TUS_INCOMPLETE_TTL")); raw != "" {
-		if d, err := time.ParseDuration(raw); err == nil {
-			cfg.incompleteTTL = d
-		}
-	}
-	return cfg
 }
 
 func cleanupStaleTusUploads(tusDir string, ttl time.Duration) (int, error) {

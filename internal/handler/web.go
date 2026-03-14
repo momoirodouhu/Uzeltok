@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"uzeltok/internal/config"
 	"uzeltok/internal/model"
 	"uzeltok/internal/service"
 	"uzeltok/internal/store"
@@ -13,26 +14,24 @@ import (
 
 // Handler は全ての HTTP ハンドラが共有する依存を保持します。
 type Handler struct {
-	links          *service.LinkService
-	uploads        *service.UploadService
-	fileDelivery   *fileDelivery
-	view           *web.Provider
-	adminPass      string
-	maxUploadBytes int64
-	csrfSecret     [32]byte
-	tusHTTP        http.Handler
+	links        *service.LinkService
+	uploads      *service.UploadService
+	fileDelivery *fileDelivery
+	view         *web.Provider
+	cfg          config.Config
+	csrfSecret   [32]byte
+	tusHTTP      http.Handler
 }
 
 // NewHandler は新しい Handler を生成します。
-func NewHandler(s *store.LinkStore, v *web.Provider, adminPass string, maxUploadBytes int64) (*Handler, error) {
+func NewHandler(s *store.LinkStore, v *web.Provider, cfg config.Config) (*Handler, error) {
 	links := service.NewLinkService(s)
 	h := &Handler{
-		links:          links,
-		uploads:        service.NewUploadService(links),
-		fileDelivery:   newFileDelivery(links),
-		view:           v,
-		adminPass:      adminPass,
-		maxUploadBytes: maxUploadBytes,
+		links:        links,
+		uploads:      service.NewUploadService(links),
+		fileDelivery: newFileDelivery(links),
+		view:         v,
+		cfg:          cfg,
 	}
 	if _, err := rand.Read(h.csrfSecret[:]); err != nil {
 		return nil, fmt.Errorf("failed to initialize CSRF secret: %w", err)

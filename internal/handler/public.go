@@ -141,7 +141,7 @@ func (h *Handler) renderLinkPage(w http.ResponseWriter, r *http.Request, l *mode
 		Link:           l,
 		Host:           r.Host,
 		BaseURL:        fmt.Sprintf("%s://%s", scheme, r.Host),
-		MaxUploadLabel: humanizeBytesIEC(h.maxUploadBytes),
+		MaxUploadLabel: humanizeBytesIEC(h.cfg.MaxUploadBytes),
 	}
 
 	if err := h.view.Render(w, tmpl, data); err != nil {

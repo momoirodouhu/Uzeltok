@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/subtle"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -18,7 +19,7 @@ import (
 // adminAuth は Basic 認証ミドルウェアです（パスワードのみ検証、ユーザー名は任意）。
 // pass が空の場合は全てのリクエストを 403 Forbidden で拒否します。
 func (h *Handler) adminAuth(next http.HandlerFunc) http.HandlerFunc {
-	pass := h.adminPass
+	pass := h.cfg.AdminPassword
 	return func(w http.ResponseWriter, r *http.Request) {
 		if pass == "" {
 			w.Header().Set("Cache-Control", "no-store")
@@ -53,10 +54,13 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	links, err := h.links.ListLinks()
+	links, warnings, err := h.links.ListLinks()
 	if err != nil {
 		http.Error(w, "Failed to list links", http.StatusInternalServerError)
 		return
+	}
+	for _, warn := range warnings {
+		log.Printf("warn: ListLinks: %v", warn)
 	}
 
 	// 新しい順に並び替え
@@ -86,14 +90,13 @@ func (h *Handler) handleAdmin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleAdminRunTusGC(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 
-	gcCfg := loadTusGCConfig()
-	if gcCfg.incompleteTTL <= 0 {
+	if h.cfg.TusIncompleteTTL <= 0 {
 		http.Redirect(w, r, "/admin?tus_gc=disabled", http.StatusSeeOther)
 		return
 	}
 
 	tusDir := filepath.Join(h.links.BaseDir(), "_tus")
-	deleted, err := cleanupStaleTusUploads(tusDir, gcCfg.incompleteTTL)
+	deleted, err := cleanupStaleTusUploads(tusDir, h.cfg.TusIncompleteTTL)
 	if err != nil {
 		http.Redirect(w, r, "/admin?tus_gc=error", http.StatusSeeOther)
 		return

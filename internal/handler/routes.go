@@ -49,5 +49,3 @@ func (h *Handler) registerPublicRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PATCH /{id}/tus/{uploadID...}", h.handlePublicTus)
 	mux.HandleFunc("DELETE /{id}/tus/{uploadID...}", h.handlePublicTus)
 }
-
-

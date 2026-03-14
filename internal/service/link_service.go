@@ -28,7 +28,7 @@ func (s *LinkService) GetLinkMetadata(id string) (model.Metadata, error) {
 	return s.store.GetLinkMetadata(id)
 }
 
-func (s *LinkService) ListLinks() ([]*model.Link, error) {
+func (s *LinkService) ListLinks() ([]*model.Link, []error, error) {
 	return s.store.ListLinks()
 }
 

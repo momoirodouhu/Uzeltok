@@ -6,12 +6,12 @@ import (
 )
 
 func (h *Handler) saveMultipartUpload(w http.ResponseWriter, r *http.Request, linkID string) (int, string) {
-	if r.ContentLength > h.maxUploadBytes {
+	if r.ContentLength > h.cfg.MaxUploadBytes {
 		return http.StatusRequestEntityTooLarge, "request body too large"
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, h.maxUploadBytes)
-	if err := r.ParseMultipartForm(h.maxUploadBytes); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, h.cfg.MaxUploadBytes)
+	if err := r.ParseMultipartForm(h.cfg.MaxUploadBytes); err != nil {
 		var mbe *http.MaxBytesError
 		if errors.As(err, &mbe) {
 			return http.StatusRequestEntityTooLarge, "request body too large"

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,6 +86,7 @@ func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
 			}
 			info, err := e.Info()
 			if err != nil {
+				log.Printf("warn: stat file %q in link %q: %v", name, uuid, err)
 				continue
 			}
 			l.Files = append(l.Files, model.FileInfo{
@@ -98,17 +100,21 @@ func (s *LinkStore) GetLink(uuid string) (*model.Link, error) {
 	return l, nil
 }
 
-// ListLinks は baseDir 内の全てのリンクを取得してリストとして返します
-func (s *LinkStore) ListLinks() ([]*model.Link, error) {
+// ListLinks は baseDir 内の全てのリンクを取得してリストとして返します。
+// 個別エントリの読み込みに失敗した場合は warnings に積み上げ、読み込めたリンクだけ返します。
+func (s *LinkStore) ListLinks() ([]*model.Link, []error, error) {
 	entries, err := os.ReadDir(s.baseDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return []*model.Link{}, nil
+			return []*model.Link{}, nil, nil
 		}
-		return nil, err
+		return nil, nil, err
 	}
 
-	var links []*model.Link
+	var (
+		links    []*model.Link
+		warnings []error
+	)
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
@@ -120,13 +126,13 @@ func (s *LinkStore) ListLinks() ([]*model.Link, error) {
 		}
 		l, err := s.GetLink(name)
 		if err != nil {
-			// 個別のメタデータ読込に失敗した場合はスキップ
+			warnings = append(warnings, fmt.Errorf("link %q: %w", name, err))
 			continue
 		}
 		links = append(links, l)
 	}
 
-	return links, nil
+	return links, warnings, nil
 }
 
 // ファイル実体の取得（ReadCloserを返すことで高速・低メモリ）
