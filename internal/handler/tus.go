@@ -286,18 +286,16 @@ func rewriteTusLocation(location, routeBase string) string {
 		return ""
 	}
 
-	parsed, err := url.Parse(location)
-	if err != nil {
-		return strings.TrimRight(routeBase, "/") + "/" + strings.TrimPrefix(location, "/")
+	uploadID := strings.TrimPrefix(location, "/")
+	if parsed, err := url.Parse(location); err == nil {
+		uploadID = strings.TrimPrefix(parsed.Path, "/")
 	}
-
-	uploadID := strings.TrimPrefix(parsed.Path, "/")
 	if _, suffix, ok := strings.Cut(uploadID, "/"); ok && suffix != "" {
 		uploadID = suffix
 	}
-	parsed.Path = strings.TrimRight(routeBase, "/") + "/" + uploadID
-	parsed.RawPath = ""
-	return parsed.String()
+
+	// Return a relative Location path so the client resolves scheme/host from current origin.
+	return strings.TrimRight(routeBase, "/") + "/" + strings.TrimPrefix(uploadID, "/")
 }
 
 func toTusStorageUploadID(linkID, uploadID string) string {
